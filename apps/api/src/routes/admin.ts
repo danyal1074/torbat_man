@@ -1,11 +1,17 @@
+import { normalizePersian } from '@torbat/i18n';
+import { cursorWhere, encodeCursor, newestFirst } from '../lib/pagination';
+import { requireOrganization } from '../workflows/requests';
+import { z } from 'zod';
+import { formEntries } from '../workflows/form-entries';
 import type { FastifyInstance } from 'fastify';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
-import { adminRequestsQuery, adminAssignBody, adminStatusBody, adminTransferBody, adminCommentBody, REASON_REQUIRED, canStaffTransition, } from '@torbat/contracts';
-import { requests, requestStatusHistory, requestComments, requestAssignments, attachments, notifications, services, organizations, users, organizationMembers, } from '../db/schema';
+import { adminRequestsQuery, adminAssignBody, adminStatusBody, adminTransferBody, adminCommentBody, STAFF_TRANSITIONS, maskMobile } from '@torbat/contracts';
+import { requests, requestStatusHistory, requestComments, attachments, services, organizations, users, organizationMembers } from '../db/schema';
 import { route } from '../lib/route';
-import { badRequest, forbidden, notFound } from '../lib/errors';
+import { forbidden, notFound } from '../lib/errors';
 import { saveUpload } from '../files/routes';
 import { audit } from '../lib/audit';
+import { assignRequest, changeRequestStatus, transferRequest, staffComment, lockedStaffRequest, canDispatch } from '../workflows/requests';
 export function adminRoutes(app: FastifyInstance) {
     // Staff Cartable / List Requests
     route(app, {
@@ -23,7 +29,11 @@ export function adminRoutes(app: FastifyInstance) {
             if (!isPlatformAdmin && userOrgIds.length === 0) {
                 throw forbidden('شما به هیچ سازمانی دسترسی ندارید.');
             }
-            const conditions = [];
+            const conditions = [eq(requests.cityId,app.ctx.cityId),cursorWhere(query.cursor,requests.createdAt,requests.id)];
+            if(query.organizationId){requireOrganization(staff,query.organizationId,'read');conditions.push(eq(requests.organizationId,query.organizationId));}
+            if(query.serviceId)conditions.push(eq(requests.serviceId,query.serviceId));
+            if(query.neighborhood)conditions.push(eq(requests.neighborhood,query.neighborhood));
+            if(query.overdue)conditions.push(sql`${requests.dueAt} < NOW() AND ${requests.status} NOT IN ('resolved','closed','rejected')`);
             // Org boundary
             if (!isPlatformAdmin) {
                 conditions.push(inArray(requests.organizationId, userOrgIds));
@@ -50,8 +60,8 @@ export function adminRoutes(app: FastifyInstance) {
             }
             // Text search
             if (query.q) {
-                const pattern = `%${query.q.trim()}%`;
-                conditions.push(sql `(${requests.title} ILIKE ${pattern} OR ${requests.trackingCode} ILIKE ${pattern} OR ${requests.description} ILIKE ${pattern})`);
+                const pattern = '%'+normalizePersian(query.q).replace(/[\\%_]/g,'\\$&')+'%';
+                conditions.push(sql `(translate(${requests.title},'يك','یک') ILIKE ${pattern} OR ${requests.trackingCode} ILIKE ${pattern} OR translate(${requests.description},'يك','یک') ILIKE ${pattern})`);
             }
             const rows = await app.ctx.db
                 .select({
@@ -67,9 +77,10 @@ export function adminRoutes(app: FastifyInstance) {
                 .innerJoin(organizations, eq(organizations.id, requests.organizationId))
                 .innerJoin(users, eq(users.id, requests.citizenId))
                 .where(and(...conditions))
-                .orderBy(desc(requests.createdAt))
-                .limit(query.limit);
-            const data = rows.map(({ req: r, serviceTitle, serviceSlug, orgName, citizenMobile, citizenName }) => ({
+                .orderBy(...newestFirst(requests.createdAt,requests.id))
+                .limit(query.limit+1);
+            const page=rows.slice(0,query.limit);
+            const data = page.map(({ req: r, serviceTitle, serviceSlug, orgName, citizenMobile, citizenName }) => ({
                 id: r.id,
                 trackingCode: r.trackingCode,
                 title: r.title,
@@ -80,13 +91,16 @@ export function adminRoutes(app: FastifyInstance) {
                 priority: r.priority,
                 description: r.description,
                 address: r.address ?? undefined,
-                citizenMobile,
+                dueAt:r.dueAt?.toISOString()??null,
+                overdue:!!r.dueAt&&r.dueAt<new Date()&&!'resolved closed rejected'.split(' ').includes(r.status),
+                citizenMobile: maskMobile(citizenMobile),
                 citizenName: citizenName ?? undefined,
                 assigneeId: r.assigneeId ?? undefined,
                 createdAt: r.createdAt.toISOString(),
                 updatedAt: r.updatedAt.toISOString(),
             }));
-            return { data };
+            const last=page.at(-1)?.req;
+            return {data,meta:{nextCursor:rows.length>query.limit&&last?encodeCursor(last.createdAt,last.id):null,limit:query.limit}};
         },
     });
     // Get Admin Request Detail
@@ -158,17 +172,19 @@ export function adminRoutes(app: FastifyInstance) {
                     serviceTitle: row.serviceTitle,
                     organizationId: row.req.organizationId,
                     organizationName: row.orgName,
-                    citizenMobile: row.citizenMobile,
+                    citizenMobile: maskMobile(row.citizenMobile),
                     citizenName: row.citizenName,
                     status: row.req.status,
                     priority: row.req.priority,
                     description: row.req.description,
-                    formData: row.req.formData as Record<string, unknown>,
+                    formEntries: await formEntries(app.ctx.db,row.req,row.req.assigneeId!==staff.userId&&!canDispatch(staff,row.req.organizationId)),
                     lat: row.req.lat ?? undefined,
                     lng: row.req.lng ?? undefined,
                     address: row.req.address ?? undefined,
                     neighborhood: row.req.neighborhood ?? undefined,
                     satisfactionScore: row.req.ratingScore ?? undefined,
+                    allowedTransitions: STAFF_TRANSITIONS[row.req.status],
+                    permissions: {canTransfer: canDispatch(staff,row.req.organizationId),canAssign:canDispatch(staff,row.req.organizationId),canComment:true,canChangeStatus:true},
                     satisfactionComment: row.req.ratingComment ?? undefined,
                     assigneeId: row.req.assigneeId ?? undefined,
                     createdAt: row.req.createdAt.toISOString(),
@@ -187,7 +203,7 @@ export function adminRoutes(app: FastifyInstance) {
                         id: c.id,
                         body: c.body,
                         visibility: c.visibility,
-                        authorName: authorName || authorMobile,
+                        authorName: authorName || (authorMobile?maskMobile(authorMobile):'کاربر سامانه'),
                         createdAt: c.createdAt.toISOString(),
                     })),
                     attachments: signedAttachments,
@@ -195,254 +211,21 @@ export function adminRoutes(app: FastifyInstance) {
             };
         },
     });
-    // Assign Request
-    route(app, {
-        method: 'PATCH',
-        url: '/v1/admin/requests/:id/assign',
-        summary: 'ارجاع پرونده به کارشناس مشخص یا لغو ارجاع',
-        tags: ['admin'],
-        auth: 'staff',
-        body: adminAssignBody,
-        handler: async ({ req, params, body }) => {
-            const staff = req.staff!;
-            const { id } = params;
-            const [row] = await app.ctx.db
-                .select()
-                .from(requests)
-                .where(eq(requests.id, id));
-            if (!row)
-                throw notFound('درخواست');
-            if (staff.platformRole !== 'platform_admin' && !staff.memberships.some(m => m.organizationId === row.organizationId))
-                throw forbidden('دسترسی به پرونده سازمان دیگر مجاز نیست.');
-            if (body.assigneeId) {
-                const [member] = await app.ctx.db.select().from(organizationMembers).where(and(eq(organizationMembers.userId, body.assigneeId), eq(organizationMembers.organizationId, row.organizationId!), eq(organizationMembers.status, 'active')));
-                if (!member)
-                    throw badRequest('INVALID_ASSIGNEE', 'کارشناس عضو این سازمان نیست.');
-            }
-            await app.ctx.db.transaction(async (tx) => {
-                await tx
-                    .update(requests)
-                    .set({ assigneeId: body.assigneeId, updatedAt: new Date() })
-                    .where(eq(requests.id, id));
-                await tx.insert(requestStatusHistory).values({
-                    requestId: id,
-                    fromStatus: row.status,
-                    toStatus: row.status,
-                    actorKind: 'staff',
-                    actorId: staff.userId,
-                    reason: body.assigneeId ? 'پرونده به کارشناس ارجاع شد.' : 'ارجاع لغو شد.',
-                });
-                await audit(tx, {
-                    actorId: staff.userId,
-                    action: 'request.assigned',
-                    entityType: 'request',
-                    entityId: id,
-                    metadata: { assigneeId: body.assigneeId },
-                });
-            });
-            return { data: { success: true, assigneeId: body.assigneeId } };
-        },
-    });
-    // Change Status
-    route(app, {
-        method: 'PATCH',
-        url: '/v1/admin/requests/:id/status',
-        summary: 'تغییر وضعیت مرحله‌ای پرونده سازمانی با ثبت تاریخچه',
-        tags: ['admin'],
-        auth: 'staff',
-        body: adminStatusBody,
-        handler: async ({ req, params, body }) => {
-            const staff = req.staff!;
-            const { id } = params;
-            const [row] = await app.ctx.db
-                .select()
-                .from(requests)
-                .where(eq(requests.id, id));
-            if (!row)
-                throw notFound('درخواست');
-            if (staff.platformRole !== 'platform_admin' && !staff.memberships.some(m => m.organizationId === row.organizationId))
-                throw forbidden('دسترسی به پرونده سازمان دیگر مجاز نیست.');
-            if (REASON_REQUIRED.includes(body.status) && !body.reason?.trim())
-                throw badRequest('REASON_REQUIRED', 'دلیل تغییر وضعیت را وارد کنید.');
-            // State machine validation
-            if (!canStaffTransition(row.status, body.status)) {
-                throw badRequest('INVALID_STATUS_TRANSITION', `تغییر وضعیت از «${row.status}» به «${body.status}» مجاز نیست.`);
-            }
-            await app.ctx.db.transaction(async (tx) => {
-                const now = new Date();
-                const updateData: Record<string, unknown> = {
-                    status: body.status,
-                    updatedAt: now,
-                };
-                if (body.status === 'resolved')
-                    updateData.resolvedAt = now;
-                if (body.status === 'closed')
-                    updateData.closedAt = now;
-                await tx.update(requests).set(updateData).where(eq(requests.id, id));
-                await tx.insert(requestStatusHistory).values({
-                    requestId: id,
-                    fromStatus: row.status,
-                    toStatus: body.status,
-                    actorKind: 'staff',
-                    actorId: staff.userId,
-                    reason: body.reason ?? `تغییر وضعیت به ${body.status}`,
-                });
-                // Notify citizen
-                const statusPersianLabels: Record<string, string> = {
-                    triaged: 'در حال ارزیابی',
-                    assigned: 'ارجاع‌شده به کارشناس',
-                    in_progress: 'در دست اقدام',
-                    waiting_for_citizen: 'منتظر پاسخ یا مدارک شما',
-                    resolved: 'حل‌شده',
-                    closed: 'مختومه',
-                    rejected: 'ردشده',
-                };
-                const label = statusPersianLabels[body.status] || body.status;
-                await tx.insert(notifications).values({
-                    userId: row.citizenId,
-                    type: 'status_changed',
-                    title: `وضعیت درخواست شما تغییر کرد: ${label}`,
-                    body: body.reason
-                        ? `توضیحات کارشناس: ${body.reason}`
-                        : `درخواست با کد رهگیری ${row.trackingCode} به وضعیت «${label}» به‌روزرسانی شد.`,
-                    entityType: 'request',
-                    entityId: id,
-                });
-                await audit(tx, {
-                    actorId: staff.userId,
-                    action: 'request.status_changed',
-                    entityType: 'request',
-                    entityId: id,
-                    metadata: { from: row.status, to: body.status, reason: body.reason },
-                });
-            });
-            return { data: { success: true, status: body.status } };
-        },
-    });
-    route(app, { method: 'POST', url: '/v1/admin/requests/:id/attachments', summary: 'ثبت تصویر نتیجه رسیدگی', tags: ['admin'], auth: 'staff', multipart: true, successStatus: 201, handler: async ({ req, params }) => {
-            const [record] = await app.ctx.db.select().from(requests).where(eq(requests.id, params.id));
-            if (!record)
-                throw notFound('درخواست');
-            if (req.staff!.platformRole !== 'platform_admin' && !req.staff!.memberships.some(m => m.organizationId === record.organizationId))
-                throw forbidden();
-            const uploaded = await saveUpload(req, req.staff!.userId, { kind: 'staff_result', requestId: record.id });
-            await audit(app.ctx.db, { actorId: req.staff!.userId, action: 'request.result_uploaded', entityType: 'request', entityId: record.id });
-            return uploaded;
-        } });
-    // Transfer Request to Another Org
-    route(app, {
-        method: 'PATCH',
-        url: '/v1/admin/requests/:id/transfer',
-        summary: 'انتقال پرونده به سازمان دیگر با ذکر دلیل',
-        tags: ['admin'],
-        auth: 'staff',
-        body: adminTransferBody,
-        handler: async ({ req, params, body }) => {
-            const staff = req.staff!;
-            const { id } = params;
-            const [row] = await app.ctx.db
-                .select()
-                .from(requests)
-                .where(eq(requests.id, id));
-            if (!row)
-                throw notFound('درخواست');
-            if (staff.platformRole !== 'platform_admin' && !staff.memberships.some(m => m.organizationId === row.organizationId))
-                throw forbidden('دسترسی به پرونده سازمان دیگر مجاز نیست.');
-            const [destination] = await app.ctx.db.select().from(organizations).where(and(eq(organizations.id, body.organizationId), eq(organizations.cityId, app.ctx.cityId), eq(organizations.status, 'active')));
-            if (!destination)
-                throw badRequest('INVALID_DESTINATION', 'سازمان مقصد هنوز برای دریافت درخواست فعال نیست.');
-            await app.ctx.db.transaction(async (tx) => {
-                await tx
-                    .update(requests)
-                    .set({
-                    organizationId: body.organizationId,
-                    assigneeId: null, // Reset assignee upon org transfer
-                    updatedAt: new Date(),
-                })
-                    .where(eq(requests.id, id));
-                await tx.insert(requestAssignments).values({
-                    kind: 'transfer',
-                    requestId: id,
-                    fromOrgId: row.organizationId,
-                    toOrgId: body.organizationId,
-                    actorId: staff.userId,
-                    reason: body.reason,
-                });
-                await tx.insert(requestStatusHistory).values({
-                    requestId: id,
-                    fromStatus: row.status,
-                    toStatus: row.status,
-                    actorKind: 'staff',
-                    actorId: staff.userId,
-                    reason: `انتقال به ${destination.name}: ${body.reason}`,
-                });
-                await tx.insert(notifications).values({ userId: row.citizenId, type: 'request_transferred', title: 'سازمان پاسخ‌گو تغییر کرد', body: `پرونده به ${destination.name} منتقل شد. ${body.reason}`, entityType: 'request', entityId: id });
-                await audit(tx, {
-                    actorId: staff.userId,
-                    action: 'request.transferred',
-                    entityType: 'request',
-                    entityId: id,
-                    metadata: { fromOrg: row.organizationId, toOrg: body.organizationId, reason: body.reason },
-                });
-            });
-            return { data: { success: true } };
-        },
-    });
-    // Add Staff Comment
-    route(app, {
-        method: 'POST',
-        url: '/v1/admin/requests/:id/comments',
-        summary: 'ثبت پاسخ کارشناس (عمومی برای شهروند یا یادداشت محرمانه داخلی)',
-        tags: ['admin'],
-        auth: 'staff',
-        body: adminCommentBody,
-        successStatus: 201,
-        handler: async ({ req, params, body }) => {
-            const staff = req.staff!;
-            const { id } = params;
-            const visibility = body.visibility;
-            const [row] = await app.ctx.db
-                .select()
-                .from(requests)
-                .where(eq(requests.id, id));
-            if (!row)
-                throw notFound('درخواست');
-            if (staff.platformRole !== 'platform_admin' && !staff.memberships.some(m => m.organizationId === row.organizationId))
-                throw forbidden('دسترسی به پرونده سازمان دیگر مجاز نیست.');
-            const [newComment] = await app.ctx.db.transaction(async (tx) => {
-                const [comment] = await tx
-                    .insert(requestComments)
-                    .values({
-                    requestId: id,
-                    authorId: staff.userId,
-                    authorKind: 'staff',
-                    visibility,
-                    body: body.body,
-                })
-                    .returning();
-                // If public response, send notification to citizen
-                if (visibility === 'public') {
-                    await tx.insert(notifications).values({
-                        userId: row.citizenId,
-                        type: 'staff_reply',
-                        title: 'پاسخ جدید کارشناس در پرونده شما',
-                        body: body.body.slice(0, 150),
-                        entityType: 'request',
-                        entityId: id,
-                    });
-                }
-                return [comment];
-            });
-            return {
-                data: {
-                    id: newComment.id,
-                    body: newComment.body,
-                    visibility: newComment.visibility,
-                    createdAt: newComment.createdAt.toISOString(),
-                },
-            };
-        },
-    });
+ route(app,{method:'PATCH',url:'/v1/admin/requests/:id/assign',summary:'تخصیص پرونده به کارشناس',tags:['admin'],auth:'staff',body:adminAssignBody,handler:async({req,params,body})=>{await assignRequest(app.ctx,req.staff!,params.id,body);return {data:{success:true,assigneeId:body.assigneeId}};}});
+ route(app,{method:'PATCH',url:'/v1/admin/requests/:id/status',summary:'تغییر وضعیت تراکنشی پرونده',tags:['admin'],auth:'staff',body:adminStatusBody,handler:async({req,params,body})=>{await changeRequestStatus(app.ctx,req.staff!,params.id,body);return {data:{success:true,status:body.status}};}});
+ route(app,{method:'PATCH',url:'/v1/admin/requests/:id/transfer',summary:'انتقال سازمانی با نقش مسئول ارجاع',tags:['admin'],auth:'staff',body:adminTransferBody,handler:async({req,params,body})=>{await transferRequest(app.ctx,req.staff!,params.id,body);return {data:{success:true}};}});
+ route(app,{method:'POST',url:'/v1/admin/requests/:id/comments',summary:'پاسخ عمومی یا یادداشت داخلی کارشناس',tags:['admin'],auth:'staff',body:adminCommentBody,successStatus:201,handler:async({req,params,body})=>({data:await staffComment(app.ctx,req.staff!,params.id,body)})});
+ route(app,{method:'POST',url:'/v1/admin/requests/:id/attachments',summary:'تصویر نتیجه رسیدگی',tags:['admin'],auth:'staff',multipart:true,successStatus:201,handler:async({req,params})=>app.ctx.db.transaction(async tx=>{
+  const record=await lockedStaffRequest(tx,app.ctx,req.staff!,params.id);
+  const uploaded=await saveUpload(req,req.staff!.userId,{kind:'staff_result',requestId:record.id,db:tx});
+  await audit(tx,{actorId:req.staff!.userId,organizationId:record.organizationId,action:'request.result_uploaded',entityType:'request',entityId:record.id});
+  return uploaded;
+ })});
+ route(app,{method:'GET',url:'/v1/admin/members',summary:'اعضای فعال سازمان برای ارجاع',tags:['admin'],auth:'staff',query:z.object({organizationId:z.uuid()}),handler:async({req,query})=>{
+  requireOrganization(req.staff!,query.organizationId,'read');
+  const rows=await app.ctx.db.select({userId:users.id,name:users.displayName,mobile:users.mobile,role:organizationMembers.role}).from(organizationMembers).innerJoin(users,eq(users.id,organizationMembers.userId)).where(and(eq(organizationMembers.organizationId,query.organizationId),eq(organizationMembers.status,'active'),eq(users.status,'active')));
+  return {data:rows.map(r=>({...r,mobile:maskMobile(r.mobile)}))};
+ }});
     // KPI Dashboard
     route(app, {
         method: 'GET',

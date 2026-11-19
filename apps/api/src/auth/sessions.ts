@@ -3,6 +3,7 @@ import type { FastifyReply } from 'fastify';
 import type { Db } from '../db/client';
 import { userSessions, users } from '../db/schema';
 import type { Env } from '../env';
+import { unauthorized } from '../lib/errors';
 import { randomToken, sha256 } from '../lib/crypto';
 export type SessionKind = 'citizen' | 'staff';
 export const SESSION_COOKIE: Record<SessionKind, string> = { citizen: 'tm_sid', staff: 'tm_asid' };
@@ -43,13 +44,14 @@ export async function resolveSession(db: Db, token: string, kind: SessionKind) {
     return row;
 }
 /** Issue a fresh token for an existing session (refresh rotation) and extend its lifetime. */
-export async function rotateSession(db: Db, sessionId: string, kind: SessionKind) {
+export async function rotateSession(db: Db, sessionId: string, kind: SessionKind, expectedToken: string) {
     const token = randomToken();
     const expiresAt = new Date(Date.now() + TTL_MS[kind]);
-    await db
+    const updated=await db
         .update(userSessions)
         .set({ tokenHash: sha256(token), expiresAt, rotatedAt: new Date() })
-        .where(eq(userSessions.id, sessionId));
+        .where(and(eq(userSessions.id,sessionId),eq(userSessions.kind,kind),eq(userSessions.tokenHash,sha256(expectedToken)),isNull(userSessions.revokedAt),gt(userSessions.expiresAt,new Date()))).returning({id:userSessions.id});
+    if(!updated.length)throw unauthorized('نشست قبلاً تغییر کرده یا پایان یافته است. دوباره وارد شوید.');
     return { token, expiresAt };
 }
 export async function revokeSession(db: Db, sessionId: string) {

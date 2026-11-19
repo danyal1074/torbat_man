@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { hmac, randomToken, safeEqual } from '../lib/crypto';
 /**
@@ -8,6 +8,7 @@ import { hmac, randomToken, safeEqual } from '../lib/crypto';
 export interface FileStorage {
     put(key: string, data: Buffer): Promise<void>;
     get(key: string): Promise<Buffer | null>;
+    delete(key: string): Promise<void>;
     newKey(ext: string): string;
     signUrl(attachmentId: string, ttlSec?: number): string;
     verifySignature(attachmentId: string, exp: string, sig: string): boolean;
@@ -31,6 +32,10 @@ export function createLocalStorage(dir: string, signingSecret: string): FileStor
             catch {
                 return null;
             }
+        },
+        async delete(key){
+            if(!/^[a-z0-9/_-]+\.[a-z]+$/i.test(key)||key.includes('..'))throw new Error('Invalid storage key');
+            await rm(join(root,key),{force:true});
         },
         newKey(ext) {
             const d = new Date();

@@ -1,31 +1,32 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { Db } from '../db/client';
 import { attachments } from '../db/schema';
 import { sha256 } from '../lib/crypto';
 import { badRequest, notFound } from '../lib/errors';
 import { route } from '../lib/route';
-import { sniffImageType, stripJpegMetadata } from './image';
+import { normalizeUpload } from './normalize';
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as const;
 /** Read one multipart file, validate it by content, strip metadata and store it privately. */
 export async function saveUpload(req: FastifyRequest, ownerId: string, opts: {
     kind: 'citizen' | 'staff_result';
     requestId?: string | null;
+    db?: Db;
 }) {
-    const { db, storage } = req.server.ctx;
+    const { storage } = req.server.ctx;
+    const db = opts.db ?? req.server.ctx.db;
     const file = await req.file({ limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } });
     if (!file)
         throw badRequest('FILE_REQUIRED', 'فایلی انتخاب نشده است.');
     const raw = await file.toBuffer();
     if (file.file.truncated)
         throw badRequest('FILE_TOO_LARGE', 'حجم تصویر باید کمتر از ۵ مگابایت باشد.');
-    const mime = sniffImageType(raw);
-    if (!mime)
-        throw badRequest('UNSUPPORTED_FILE', 'فقط تصویر JPG، PNG یا WebP پذیرفته می‌شود.');
-    const data = mime === 'image/jpeg' ? stripJpegMetadata(raw) : raw;
-    const key = storage.newKey(EXT[mime]);
+    const {data,mimeType:mime}=await normalizeUpload(raw);
+    const key=storage.newKey('webp');
     await storage.put(key, data);
-    const [row] = await db
+    let row;
+    try{
+    [row] = await db
         .insert(attachments)
         .values({
         ownerId,
@@ -37,6 +38,7 @@ export async function saveUpload(req: FastifyRequest, ownerId: string, opts: {
         checksum: sha256(data),
     })
         .returning();
+    }catch(error){await storage.delete(key).catch(()=>req.log.warn('upload cleanup failed'));throw error;}
     return {
         id: row!.id,
         mimeType: row!.mimeType,

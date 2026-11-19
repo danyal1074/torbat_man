@@ -20,7 +20,7 @@ export const STAFF_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> 
 /** Statuses from which the citizen may reopen (object to a rejection or an unsatisfying resolution). */
 export const CITIZEN_REOPENABLE: readonly RequestStatus[] = ['resolved', 'rejected'];
 
-/** Status from which the citizen may rate the result (rating closes the request). */
+/** Status from which the citizen may rate the result (closure remains a staff action). */
 export const CITIZEN_RATEABLE: readonly RequestStatus[] = ['resolved'];
 
 /** Statuses in which the citizen may add a public message. */

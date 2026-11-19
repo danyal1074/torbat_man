@@ -15,6 +15,7 @@ import { announcementsRoutes } from './routes/announcements';
 import { notificationsRoutes } from './routes/notifications';
 import { placesRoutes } from './routes/places';
 import { registerErrorHandler } from './lib/errors';
+import { managementRoutes } from './routes/management';
 import { buildOpenApi } from './lib/route';
 export async function createApp(ctx: AppContext): Promise<FastifyInstance> {
     const app = fastify({
@@ -22,7 +23,7 @@ export async function createApp(ctx: AppContext): Promise<FastifyInstance> {
             level: ctx.env.LOG_LEVEL,
             serializers: {
                 req(req) {
-                    return { method: req.method, url: req.url, hostname: req.hostname, remoteAddress: req.ip };
+                    return { method: req.method, url: req.url.split('?')[0], hostname: req.hostname, remoteAddress: req.ip };
                 },
             },
         },
@@ -77,6 +78,7 @@ export async function createApp(ctx: AppContext): Promise<FastifyInstance> {
     announcementsRoutes(app);
     notificationsRoutes(app);
     placesRoutes(app);
+    managementRoutes(app);
     app.get('/openapi.json', async () => buildOpenApi(app.routeDocs));
     app.get('/docs', async () => buildOpenApi(app.routeDocs));
     app.addHook('onRequest', async (req, reply) => {

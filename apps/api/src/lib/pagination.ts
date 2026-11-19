@@ -9,11 +9,11 @@ export function decodeCursor(cursor: string): {
     createdAt: Date;
     id: string;
 } {
-    const [iso, id] = Buffer.from(cursor, 'base64url').toString().split('|');
-    const createdAt = new Date(iso ?? '');
-    if (!id || Number.isNaN(createdAt.getTime()) || !/^[0-9a-f-]{36}$/.test(id)) {
-        throw badRequest('INVALID_CURSOR', 'نشانگر صفحه نامعتبر است.');
-    }
+    if(!/^[A-Za-z0-9_-]+$/.test(cursor))throw badRequest('INVALID_CURSOR','نشانگر صفحه نامعتبر است.');
+    const parts=Buffer.from(cursor,'base64url').toString().split('|');
+    const [iso,id]=parts;
+    const createdAt=new Date(iso??'');
+    if(parts.length!==2||!id||Number.isNaN(createdAt.getTime())||createdAt.toISOString()!==iso||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))throw badRequest('INVALID_CURSOR','نشانگر صفحه نامعتبر است.');
     return { createdAt, id };
 }
 export function cursorWhere(cursor: string | undefined, createdAtCol: PgColumn, idCol: PgColumn): SQL | undefined {

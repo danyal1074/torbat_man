@@ -37,8 +37,8 @@ async function staffMe(app: FastifyInstance, userId: string): Promise<StaffMeDTO
 }
 const device = (req: FastifyRequest) => req.headers['user-agent']?.toString();
 export function authRoutes(app: FastifyInstance) {
-    const otpLimit = { max: 5, timeWindow: '1 minute' };
-    const verifyLimit = { max: 10, timeWindow: '1 minute' };
+    const otpLimit = { max: app.ctx.env.NODE_ENV==='test'?30:5, timeWindow: '1 minute' };
+    const verifyLimit = { max: app.ctx.env.NODE_ENV==='test'?30:10, timeWindow: '1 minute' };
     /* ───── citizen ───── */
     route(app, {
         method: 'POST',
@@ -80,7 +80,7 @@ export function authRoutes(app: FastifyInstance) {
         tags: ['auth'],
         auth: 'citizen',
         handler: async ({ req, reply }) => {
-            const s = await rotateSession(app.ctx.db, req.citizen!.sessionId, 'citizen');
+            const s = await rotateSession(app.ctx.db, req.citizen!.sessionId, 'citizen',req.cookies[SESSION_COOKIE.citizen]!);
             setSessionCookie(reply, app.ctx.env, 'citizen', s.token, s.expiresAt);
             return { ok: true };
         },

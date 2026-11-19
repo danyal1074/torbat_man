@@ -314,6 +314,7 @@ export const idempotencyKeys = pgTable('idempotency_keys', {
         .references(() => users.id, { onDelete: 'cascade' }),
     key: text().notNull(),
     scope: text().notNull(),
+    fingerprint: text(),
     resourceId: uuid(),
     createdAt: createdAt(),
 }, (t) => [uniqueIndex().on(t.userId, t.scope, t.key)]);
@@ -351,7 +352,7 @@ export const announcements = pgTable('announcements', {
     sourceUrl: text(),
     importance: announcementImportanceEnum().notNull().default('normal'),
     isDemo: boolean().notNull().default(true),
-    status: text({ enum: ['published', 'archived'] })
+    status: text({ enum: ['draft', 'published', 'archived'] })
         .notNull()
         .default('published'),
     publishedAt: ts().defaultNow().notNull(),

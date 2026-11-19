@@ -16,7 +16,13 @@ export interface RecordRow {
     description: string;
     address?: string;
     assigneeId?: string;
+    organizationId?: string;
+    dueAt?: string|null;
+    overdue?: boolean;
+    allowedTransitions?: RequestStatus[];
+    permissions?: {canTransfer:boolean;canAssign:boolean;canComment:boolean;canChangeStatus:boolean};
     satisfactionScore?: number;
+    formEntries?: {label:string;value:string}[];
     history?: {
         id: string;
         toStatus: string;

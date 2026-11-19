@@ -15,9 +15,10 @@ export interface CatalogCache {
 }
 export function createCatalogCache(db: Db, cityId: string): CatalogCache {
     let cached: CatalogService[] | null = null;
+    let cachedAt=0;
     return {
         async getServices() {
-            if (cached)
+            if (cached&&Date.now()-cachedAt<30000)
                 return cached;
             const rows = await db.select().from(services).where(eq(services.cityId, cityId));
             const forms = await db.select().from(serviceFormSchemas);
@@ -26,6 +27,7 @@ export function createCatalogCache(db: Db, cityId: string): CatalogCache {
             const result = rows.map(r => ({ ...r, form: forms.find(f => f.serviceId === r.id && f.isActive)?.jsonSchema ?? null, categorySlug: cats.find(c => c.id === r.categoryId)?.slug ?? '', organization: orgs.find(o => o.id === r.organizationId) ?? null, lastVerifiedAt: r.lastVerifiedAt?.toISOString() ?? null }));
             result.sort((a, b) => a.sortOrder - b.sortOrder);
             cached = result;
+            cachedAt=Date.now();
             return result;
         },
         async getCategories() { return db.select().from(serviceCategories).where(eq(serviceCategories.cityId, cityId)); },

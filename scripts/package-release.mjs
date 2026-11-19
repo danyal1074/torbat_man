@@ -5,7 +5,8 @@ import { execFileSync } from 'node:child_process';
 const source=resolve('.');
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 if(!/^[a-f0-9]{40}$/.test(sha))throw new Error('A committed source revision is required.');
-const root=join(source,'.release',sha);
+const prepareLock=process.argv.includes('--prepare-lock');
+const root=join(source,'.release',prepareLock?'runtime-lock':sha);
 await mkdir(dirname(root),{recursive:true});
 await mkdir(root,{recursive:false});
 const pkg=JSON.parse(await readFile('apps/api/package.json','utf8'));
@@ -22,6 +23,11 @@ for(const name of Object.keys(pkg.dependencies).filter(n=>!n.startsWith('@torbat
 await mkdir(join(root,'api'));
 await writeFile(join(root,'api/package.json'),JSON.stringify({name:'torbat-man-runtime',version:'0.1.0',private:true,type:'module',engines:{node:'>=22'},dependencies},null,2));
 const lock=JSON.parse(await readFile('infra/runtime-package-lock.json','utf8'));
+if(prepareLock){
+ await writeFile(join(root,'api/package-lock.json'),JSON.stringify(lock,null,2)+'\n');
+ console.log(join(root,'api'));
+ process.exit(0);
+}
 const locked=lock.packages?.['']?.dependencies;
 if(!locked||Object.keys(locked).length!==Object.keys(dependencies).length||Object.entries(dependencies).some(([name,version])=>locked[name]!==version))throw new Error('Runtime dependencies changed. Regenerate and review infra/runtime-package-lock.json before packaging.');
 await writeFile(join(root,'api/package-lock.json'),JSON.stringify(lock,null,2));

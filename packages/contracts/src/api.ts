@@ -79,6 +79,8 @@ export const paginationQuery = z.object({
 
 export const myRequestsQuery = paginationQuery.extend({
   status: z.enum(['open', 'done', 'all']).default('all'),
+  q: z.string().trim().max(100).optional(),
+  organizationId: z.uuid().optional(),
 });
 
 /* ─── Admin ─── */
@@ -87,7 +89,9 @@ export const adminRequestsQuery = paginationQuery.extend({
   serviceId: z.uuid().optional(),
   priority: z.enum(PRIORITIES).optional(),
   assignee: z.enum(['me', 'unassigned', 'any']).default('any'),
-  overdue: z.coerce.boolean().optional(),
+  overdue: z.enum(['true','false']).transform(v=>v==='true').optional(),
+  organizationId: z.uuid().optional(),
+  neighborhood: z.string().trim().max(100).optional(),
   q: z.string().trim().max(100).optional(),
 });
 

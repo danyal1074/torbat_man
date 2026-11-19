@@ -4,3 +4,4 @@ export * from './mobile';
 export * from './tracking';
 export * from './forms';
 export * from './api';
+export * from './management';

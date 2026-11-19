@@ -639,7 +639,7 @@ export const SERVICES: SeedService[] = [
     },
 ];
 // Account and assistant capabilities are discoverable alongside municipal services.
-SERVICES.push({ slug: 'smart-assistant', title: 'دستیار فارسی و یافتن خدمت', shortTitle: 'دستیار فارسی', description: 'جست‌وجوی واژه‌محور آزمایشی با انتخاب نهایی شهروند؛ بدون مدل زبانی یا دانش‌نامه رسمی.', icon: 'sparkles', category: 'citizen', org: null, status: 'active_demo', workflow: 'info', keywords: ['دستیار', 'راهنما', 'پیدا کردن خدمت'] }, { slug: 'citizen-account', title: 'حساب شهروند و داده‌های من', shortTitle: 'حساب من', description: 'ورود آزمایشی، پروفایل، درخواست‌ها، اعلان‌ها و خروجی داده؛ امکانات خانواده و آدرس‌ها در مراحل بعد.', icon: 'user-round', category: 'citizen', org: null, status: 'active_demo', workflow: 'info', keywords: ['حساب', 'پروفایل', 'حریم خصوصی', 'داده', 'اعلان'] }, { slug: 'citizen-support', title: 'راهنما و پشتیبانی شهروند', shortTitle: 'پشتیبانی', description: 'درباره نسخه و محدودیت‌ها در حساب من موجود است. مرکز پاسخ‌گویی، FAQ، گزارش باگ و متن حقوقی تأییدشده در مرحله بعد تکمیل می‌شود.', icon: 'circle-help', category: 'citizen', org: null, status: 'informational', workflow: 'info', keywords: ['پشتیبانی', 'سوال', 'باگ', 'قوانین', 'حریم خصوصی'] });
+SERVICES.push({ slug: 'smart-assistant', title: 'دستیار فارسی و یافتن خدمت', shortTitle: 'دستیار فارسی', description: 'جست‌وجوی واژه‌محور آزمایشی با انتخاب نهایی شهروند؛ بدون مدل زبانی یا دانش‌نامه رسمی.', icon: 'sparkles', category: 'citizen', org: null, status: 'active_demo', workflow: 'info', keywords: ['دستیار', 'راهنما', 'پیدا کردن خدمت'] }, { slug: 'citizen-account', title: 'حساب شهروند و داده‌های من', shortTitle: 'حساب من', description: 'ورود آزمایشی، پروفایل، درخواست‌ها، اعلان‌ها و خروجی داده؛ امکانات خانواده و آدرس‌ها در مراحل بعد.', icon: 'user-round', category: 'citizen', org: null, status: 'active_demo', workflow: 'info', keywords: ['حساب', 'پروفایل', 'حریم خصوصی', 'داده', 'اعلان'] }, { slug: 'citizen-support', title: 'راهنما و پشتیبانی شهروند', shortTitle: 'پشتیبانی', description: 'راهنمای استفاده، پرسش‌های رایج و ثبت پیام خصوصی برای پشتیبانی یا گزارش مشکل برنامه در نسخه آزمایشی.', icon: 'circle-help', category: 'citizen', org: null, status: 'active_demo', workflow: 'info', keywords: ['پشتیبانی', 'سوال', 'باگ', 'قوانین', 'حریم خصوصی'] });
 /** Feature flags per city (module-level activation). */
 export const FEATURE_FLAGS: Record<string, boolean> = {
     shahrbin: true,
@@ -675,4 +675,5 @@ export const DEMO_USERS: {
     { mobile: '09150000002', displayName: 'مسئول ارجاع برق', memberships: [{ org: 'BARGH', role: 'org_dispatcher' }] },
     { mobile: '09100000000', displayName: 'مدیر سامانه', platformRole: 'platform_admin' },
     { mobile: '09100000001', displayName: 'ویراستار محتوا', platformRole: 'content_editor' },
+    { mobile: '09100000002', displayName: 'پشتیبان آزمایشی سامانه', platformRole: 'support_agent' },
 ];

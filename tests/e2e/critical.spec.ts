@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test, expect, type Page } from '@playwright/test';
 async function login(page: Page, mobile: string, admin = false) {
     await page.goto(admin ? '/admin/login' : '/login');
@@ -8,7 +9,7 @@ async function login(page: Page, mobile: string, admin = false) {
     const code = (await banner.innerText()).match(/\d{5}/)![0];
     await page.getByLabel('کد ورود', { exact: true }).fill(code);
     await page.getByRole('button', { name: 'تأیید و ورود', exact: true }).click();
-    await expect(page).toHaveURL(admin ? /\/admin$/ : /\/$/);
+    await expect(page).toHaveURL(admin ? /\/admin(?:\/content|\/support)?$/ : /\/$/);
 }
 test('شهروند ← ثبت تصویر و درخواست ← کارشناس ← پاسخ و اعلان ← بازگشایی', async ({ page, browser }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -18,7 +19,7 @@ test('شهروند ← ثبت تصویر و درخواست ← کارشناس �
     await page.getByLabel('خدمت و سازمان پاسخ‌گو').selectOption('report-road');
     await page.getByRole('button', { name: 'ادامه', exact: true }).click();
     await page.getByLabel('نشانی یا محله').fill('نشانی ساختگی آزمایشی، کوچه تست');
-    await page.getByLabel(/تصویر \(اختیاری/).setInputFiles({ name: 'test.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aVwAAAABJRU5ErkJggg==', 'base64') });
+    await page.getByLabel(/تصویر \(اختیاری/).setInputFiles({ name: 'test.png', mimeType: 'image/png', buffer: readFileSync('tests/fixtures/report.png') });
     await page.getByRole('button', { name: 'ادامه', exact: true }).click();
     await page.getByRole('checkbox').check();
     await page.getByRole('button', { name: 'تأیید و ثبت درخواست', exact: true }).click();
@@ -34,7 +35,7 @@ test('شهروند ← ثبت تصویر و درخواست ← کارشناس �
     await expect(staff.getByText('نشانی ساختگی آزمایشی، کوچه تست', { exact: true })).toBeVisible();
     await staff.getByRole('button',{name:'ارجاع به خودم',exact:true}).click();
     await expect(staff.locator('.notice')).toContainText('تغییرات ذخیره شد');
-    await staff.getByLabel('تصویر نتیجه رسیدگی').setInputFiles({name:'result.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aVwAAAABJRU5ErkJggg==','base64')});
+    await staff.getByLabel('تصویر نتیجه رسیدگی').setInputFiles({name:'result.png',mimeType:'image/png',buffer:readFileSync('tests/fixtures/report.png')});
     await staff.getByRole('button',{name:'بارگذاری تصویر نتیجه',exact:true}).click();
     await expect(staff.getByText('تصویر نتیجه ذخیره شد.',{exact:true})).toBeVisible();
     await staff.getByLabel('پیام جدید').fill('پاسخ آزمایشی کارشناس برای شهروند');
@@ -119,7 +120,7 @@ test('میز خدمت آبفا، جداسازی سازمان و انتقال ب�
     const id = page.url().split('/').at(-1)!;
     const waterContext = await browser.newContext();
     const water = await waterContext.newPage();
-    await login(water, '09140000001', true);
+    await login(water, '09140000002', true);
     await water.goto('/admin/requests/' + id);
     await expect(water.getByRole('heading', { name: 'مسیر درخواست' })).toBeVisible();
     const electricityContext = await browser.newContext();
@@ -137,4 +138,69 @@ test('میز خدمت آبفا، جداسازی سازمان و انتقال ب�
     await expect(page.locator('.timeline')).toContainText('توزیع برق');
     await waterContext.close();
     await electricityContext.close();
+});
+
+test('مدیر فرم خدمت را نسخه‌بندی می‌کند و شهروند فیلد جدید را ثبت می‌کند',async({page,browser})=>{
+ await login(page,'09100000000',true);
+ await page.goto('/admin/services/muni-general-request');
+ await page.getByRole('button',{name:'افزودن فیلد',exact:true}).click();
+ const field=page.locator('fieldset').last();await field.getByLabel('عنوان فیلد',{exact:true}).fill('نشانه ویژه شهروند');
+ await field.getByLabel('پاسخ الزامی',{exact:true}).check();
+ await page.getByRole('button',{name:'ذخیره خدمت و فرم',exact:true}).click();
+ await expect(page.locator('.notice')).toContainText('خدمت ذخیره شد');
+ const citizenContext=await browser.newContext();const citizen=await citizenContext.newPage();await login(citizen,'09121110004');
+ await citizen.goto('/new?service=muni-general-request');
+ await citizen.getByLabel('چه اتفاقی افتاده یا چه درخواستی داری؟').fill('درخواست آزمایشی با فرم ساخته‌شده توسط مدیر سازمان');
+ await citizen.getByRole('button',{name:'ادامه',exact:true}).click();
+ await citizen.getByLabel('نشانی یا محله').fill('نشانی آزمایشی آزمون فرم مدیر');
+ for(const input of await citizen.locator('main input[required]').all())if(!(await input.inputValue()))await input.fill('1234567890');
+ for (const select of await citizen.locator('main select[required]').all()) {
+   if (await select.inputValue()) continue;
+   const value = await select.locator('option:not([value=""])').first().getAttribute('value');
+   if (value) await select.selectOption(value);
+ }
+ await citizen.getByLabel('نشانه ویژه شهروند').fill('پاسخ نمونه به فیلد ساخته‌شده');
+ await citizen.getByRole('button',{name:'ادامه',exact:true}).click();await citizen.getByRole('checkbox').check();
+ await citizen.getByRole('button',{name:'تأیید و ثبت درخواست',exact:true}).click();
+ await expect(citizen.getByRole('heading',{name:'درخواستت ثبت شد'})).toBeVisible();
+ await citizen.getByRole('link',{name:'مشاهده و پیگیری درخواست'}).click();
+ await expect(citizen.locator('.form-entries')).toContainText('نشانه ویژه شهروند');
+ await expect(citizen.locator('.form-entries')).toContainText('پاسخ نمونه به فیلد ساخته‌شده');
+ await page.setViewportSize({width:390,height:844});await page.goto('/admin/services');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/admin-services-mobile.png',fullPage:true});
+ await citizenContext.close();
+});
+
+test('پیش‌نویس اطلاعیه فقط پس از انتشار آزمایشی در خانه دیده می‌شود',async({page})=>{
+ await login(page,'09100000001',true);
+ await expect(page).toHaveURL(/\/admin\/content$/);
+ await page.getByRole('button',{name:'اطلاعیه جدید',exact:true}).click();
+ const title='اطلاعیه نمونه آزمون مرورگر';
+ await page.getByLabel('عنوان اطلاعیه',{exact:true}).fill(title);
+ await page.getByLabel('متن اطلاعیه',{exact:true}).fill('این متن ساختگی برای بررسی انتشار واقعی محتوا از پنل است.');
+ await page.getByLabel('نام منبع',{exact:true}).fill('منبع آزمایشی سامانه');
+ await page.getByRole('button',{name:'ذخیره پیش‌نویس',exact:true}).click();
+ const article=page.locator('.managed-announcement').filter({hasText:title});
+ await expect(article).toContainText('پیش‌نویس');
+ const before=await page.request.get('/v1/announcements');expect((await before.json()).data.some((n:{title:string})=>n.title===title)).toBe(false);
+ await article.getByRole('button',{name:'انتشار آزمایشی',exact:true}).click();await expect(article).toContainText('منتشرشده آزمایشی');
+ await page.goto('/');await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
+ await page.goto('/admin/content');await page.locator('.managed-announcement').filter({hasText:title}).getByRole('button',{name:'بایگانی و توقف نمایش'}).click();
+ await expect(page.locator('.managed-announcement').filter({hasText:title})).toContainText('بایگانی');
+ await page.screenshot({path:'test-results/admin-content.png',fullPage:true});
+});
+
+test('پیام شهروند فقط در صندوق مجاز پشتیبانی بررسی می‌شود',async({page,browser})=>{
+ await login(page,'09121110005');await page.goto('/support');
+ await page.getByLabel('موضوع پیام').selectOption('bug');
+ const message='گزارش باگ آزمایشی از مسیر واقعی شهروند تا پشتیبان';
+ await page.getByLabel('متن پیام',{exact:true}).fill(message);
+ await page.getByRole('button',{name:'ثبت پیام پشتیبانی',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('پیامت ثبت شد');
+ const supportContext=await browser.newContext();const support=await supportContext.newPage();await login(support,'09100000002',true);
+ await expect(support).toHaveURL(/\/admin\/support$/);
+ const item=support.locator('article').filter({hasText:message});await expect(item).toContainText('جدید');
+ await item.getByRole('button',{name:'ثبت بررسی پیام',exact:true}).click();await expect(item).toContainText('بررسی‌شده');
+ await supportContext.close();
 });
