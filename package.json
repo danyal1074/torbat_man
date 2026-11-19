@@ -1,0 +1,32 @@
+{
+  "name": "torbat-man",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "تربت من — سوپراپلیکیشن شهروندی تربت حیدریه",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @torbat/api --filter @torbat/citizen-web --filter @torbat/admin-web run dev",
+    "build": "pnpm -r --filter ./apps/* run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "eslint .",
+    "test": "pnpm -r run test",
+    "test:e2e": "playwright test",
+    "db:generate": "pnpm --filter @torbat/api run db:generate",
+    "db:migrate": "pnpm --filter @torbat/api run db:migrate",
+    "db:seed": "pnpm --filter @torbat/api run db:seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^22.15.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}

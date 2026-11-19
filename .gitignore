@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.local
+*.log
+.DS_Store
+
+# local data (PGlite dev database, private uploads)
+apps/api/.data/
+apps/api/storage/
+
+# playwright
+test-results/
+playwright-report/
+e2e/.auth/
+
+# Local deployment packages and private environment files
+.release/
+*.env
+!*.env.example
