@@ -7,10 +7,10 @@ base=/opt/torbat-man
 release="$base/releases/$revision"
 test -f "$release/release.json"
 test ! -e "$base/current"
-! getent passwd torbat-man >/dev/null
-! docker container inspect torbat-man-postgres >/dev/null 2>&1
-! docker volume inspect torbat-man-postgres-data >/dev/null 2>&1
-! docker network inspect torbat-man >/dev/null 2>&1
+if getent passwd torbat-man >/dev/null; then echo 'Service user already exists; stop for review.' >&2; exit 1; fi
+if docker container inspect torbat-man-postgres >/dev/null 2>&1; then echo 'Container already exists; stop for review.' >&2; exit 1; fi
+if docker volume inspect torbat-man-postgres-data >/dev/null 2>&1; then echo 'Data volume already exists; stop for review.' >&2; exit 1; fi
+if docker network inspect torbat-man >/dev/null 2>&1; then echo 'Network already exists; stop for review.' >&2; exit 1; fi
 for port in 4180 4181 5441; do
  if ss -H -ltn "sport = :$port" | grep -q .; then echo "Port $port is already occupied" >&2; exit 1; fi
 done
