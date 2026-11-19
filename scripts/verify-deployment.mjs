@@ -10,7 +10,7 @@ if(accessPath){
  const username=access.match(/^Username: (\S+)\s*$/m)?.[1];
  const password=access.match(/^Password: (\S+)\s*$/m)?.[1];
  if(!username||!password)throw new Error('Missing preview credentials.');
- auth={httpCredentials:{username,password,origin:origin.origin}};
+ auth={httpCredentials:{username,password,origin:origin.origin,send:'always'}};
 }
 const browser=await chromium.launch({channel:'chrome'});
 const citizen=await browser.newContext({...auth,viewport:{width:390,height:844}});
@@ -18,8 +18,11 @@ const staff=await browser.newContext(auth);
 const errors=[];
 try{
  async function api(context,path,body,method='POST'){
-  const response=await context.request.fetch(base+'/v1'+path,{method,data:body});
-  if(!response.ok())throw new Error(path+': '+response.status()+' '+await response.text());
+  const response=await context.request.fetch(base+'/v1'+path,{method,data:body}).catch(error=>{
+   const code=/\b(?:ETIMEDOUT|ECONNREFUSED|ECONNRESET|ENOTFOUND)\b/.exec(error.message)?.[0] ?? 'transport error';
+   throw new Error(method+' '+path+': '+code);
+  });
+  if(!response.ok())throw new Error(method+' '+path+': '+response.status());
   return response.json();
  }
  async function login(context,mobile,admin=false){
@@ -62,4 +65,7 @@ try{
  const result={checkedAt:new Date().toISOString(),database:'isolated-postgresql-16',catalogCount:list.data.length,checks:['built-ui','cookie-login','request-create','staff-assignment','staff-reply','status-history','citizen-result','notification'],browserErrors:errors.length,status:'passed'};
  await writeFile('.release/verification/server-smoke.json',JSON.stringify(result,null,2));
  console.log(JSON.stringify(result));
+}catch(error){
+ console.error('Deployment smoke failed:', error.message.split('\n',1)[0]);
+ process.exitCode=1;
 }finally{await browser.close();}
