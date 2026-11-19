@@ -1,9 +1,20 @@
 import { chromium } from '@playwright/test';
-import { mkdir, writeFile } from 'node:fs/promises';
-const base='http://localhost:4180';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+const base=process.env.TORBAT_SMOKE_URL ?? 'http://localhost:4180';
+const accessPath=process.env.TORBAT_SMOKE_ACCESS_FILE;
+let auth={};
+if(accessPath){
+ const origin=new URL(base);
+ if(origin.protocol!=='https:'||origin.hostname!=='torbat.digiral.ir')throw new Error('Access credentials require the Torbat HTTPS domain.');
+ const access=await readFile(accessPath,'utf8');
+ const username=access.match(/^Username: (\S+)\s*$/m)?.[1];
+ const password=access.match(/^Password: (\S+)\s*$/m)?.[1];
+ if(!username||!password)throw new Error('Missing preview credentials.');
+ auth={httpCredentials:{username,password,origin:origin.origin}};
+}
 const browser=await chromium.launch({channel:'chrome'});
-const citizen=await browser.newContext({viewport:{width:390,height:844}});
-const staff=await browser.newContext();
+const citizen=await browser.newContext({...auth,viewport:{width:390,height:844}});
+const staff=await browser.newContext(auth);
 const errors=[];
 try{
  async function api(context,path,body,method='POST'){

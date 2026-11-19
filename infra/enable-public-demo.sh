@@ -5,11 +5,37 @@ base=/opt/torbat-man
 available=/etc/nginx/sites-available/torbat.digiral.ir.conf
 enabled=/etc/nginx/sites-enabled/torbat.digiral.ir.conf
 test -L "$base/current"
-test ! -e "$available"
-test ! -e "$enabled"
+test ! -e "$available" && test ! -L "$available" || exit 1
+test ! -e "$enabled" && test ! -L "$enabled" || exit 1
 test ! -e "$base/shared/nginx.htpasswd"
+test ! -e "$base/shared/demo-access.txt"
+exec 9>"$base/shared/update.lock"
+flock -n 9
+nginx_config="$(nginx -T 2>/dev/null)"
+if grep -Eq '^[[:space:]]*server_name[[:space:]]+([^;]*[[:space:]])?torbat\.digiral\.ir([[:space:]]|;)' <<< "$nginx_config"; then
+    echo 'An existing configuration already serves torbat.digiral.ir.' >&2
+    exit 1
+fi
 curl -fsS http://127.0.0.1:4180/health >/dev/null
+curl -fsS http://127.0.0.1:5000/api/health >/dev/null
 mkdir -p "$base/shared/acme/.well-known/acme-challenge" "$base/shared/public-baseline"
+old_env="$base/shared/public-baseline/api.env.before-https"
+env_saved=false
+rollback_on_error() {
+    result=$?
+    trap - EXIT
+    if [ "$result" -ne 0 ]; then
+        echo 'Activation failed; restoring the previous private setup.' >&2
+        rm -f -- "$enabled" "$available" "$base/shared/nginx.htpasswd" "$base/shared/demo-access.txt"
+        if [ "$env_saved" = true ]; then
+            install -m 0600 "$old_env" "$base/shared/api.env"
+            systemctl restart torbat-man-api || true
+        fi
+        if nginx -t; then systemctl reload nginx; fi
+    fi
+    exit "$result"
+}
+trap rollback_on_error EXIT
 python3 - <<'PY'
 import pathlib,hashlib,json,subprocess,secrets,os,grp
 base=pathlib.Path('/opt/torbat-man/shared')
@@ -46,7 +72,8 @@ certbot certonly --webroot -w "$base/shared/acme" -d torbat.digiral.ir \
  --non-interactive --agree-tos --register-unsafely-without-email \
  --deploy-hook 'nginx -t && systemctl reload nginx'
 test -s /etc/letsencrypt/live/torbat.digiral.ir/fullchain.pem
-cp "$base/shared/api.env" "$base/shared/public-baseline/api.env.before-https"
+install -m 0600 "$base/shared/api.env" "$old_env"
+env_saved=true
 python3 - <<'PY'
 from pathlib import Path
 p=Path('/opt/torbat-man/shared/api.env')
@@ -114,4 +141,12 @@ assert before==after,'An existing PM2 process changed during setup'
 print('Verified: all pre-existing vhost files and PM2 processes unchanged.')
 PY
 curl -fsS http://127.0.0.1:5000/api/health >/dev/null
+test "$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' --resolve torbat.digiral.ir:443:127.0.0.1 https://torbat.digiral.ir/health)" = 401
+python3 - <<'PY'
+from pathlib import Path
+import subprocess
+password = next(line.split(': ', 1)[1] for line in Path('/opt/torbat-man/shared/demo-access.txt').read_text().splitlines() if line.startswith('Password: '))
+subprocess.run(['curl', '-fsS', '--max-time', '10', '--resolve', 'torbat.digiral.ir:443:127.0.0.1', '--config', '-', 'https://torbat.digiral.ir/health'], input=f'user = "torbat:{password}"\n', text=True, check=True)
+PY
+trap - EXIT
 echo 'Torbat Man HTTPS preview enabled behind a private access password.'
