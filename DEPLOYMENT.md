@@ -4,7 +4,7 @@
 
 نسخه آزمایشی تربت من از منابع مستقل استفاده می‌کند: `/opt/torbat-man`، سرویس‌های `torbat-man-api` و `torbat-man-web`، کانتینر و volume اختصاصی PostgreSQL. پورت وب `127.0.0.1:4180`، API برابر `127.0.0.1:4181` و PostgreSQL برابر `127.0.0.1:5441` است. محدودیت CPU، RAM و تعداد پردازش اعمال می‌شود. هیچ فایل Nginx، سرویس PM2، دیتابیس یا پورت پروژه دیگر نباید تغییر کند.
 
-بسته انتشار با `node scripts/package-release.mjs` از build و commit مشخص ساخته می‌شود. وابستگی‌های مستقیم runtime روی نسخه نصب‌شده pin می‌شوند؛ قبل از بسته‌بندی نهایی، داخل پوشه `api` بسته، `npm install --package-lock-only --ignore-scripts --omit=dev` اجرا شود. سپس بسته به مسیر releases منتقل و `infra/provision-private-demo.sh COMMIT_SHA` فقط برای نصب اولیه اجرا شود. این اسکریپت در صورت وجود منابع هم‌نام یا پورت اشغال‌شده متوقف می‌شود؛ secretها فقط روی سرور ساخته می‌شوند و در Git یا artifact قرار نمی‌گیرند.
+بسته انتشار با `node scripts/package-release.mjs` از build و commit مشخص ساخته می‌شود. وابستگی‌های مستقیم runtime روی نسخه نصب‌شده pin می‌شوند؛ lock runtime در `infra/runtime-package-lock.json` ثبت شده و package script آن را پس از تطبیق dependencyها به بسته کپی می‌کند. در صورت تغییر نسخه‌ها، lock باید با `npm install --package-lock-only --ignore-scripts --omit=dev` داخل پوشه API بسته بازتولید و بازبینی شود. سپس بسته به مسیر releases منتقل و `infra/provision-private-demo.sh COMMIT_SHA` فقط برای نصب اولیه اجرا شود. این اسکریپت در صورت وجود منابع هم‌نام یا پورت اشغال‌شده متوقف می‌شود؛ secretها فقط روی سرور ساخته می‌شوند و در Git یا artifact قرار نمی‌گیرند.
 
 دسترسی خصوصی، بدون تغییر فایروال یا Nginx:
 
@@ -49,4 +49,4 @@ API را از پوشه `apps/api` با `pnpm start` اجرا کنید. تنظی�
 
 `pnpm db:migrate` تغییرات نسخه‌دار را اعمال می‌کند. پیش از migration عملیاتی snapshot و آزمون rollback/restore لازم است. `pnpm db:seed` صرفاً کاتالوگ و حساب‌های ساختگی توسعه را ایجاد می‌کند. اجرای مجدد، درخواست‌ها و پیوست‌ها را حذف نمی‌کند.
 
-تست خودکار، دیتابیس مستقل موقت دارد. PostgreSQL شبکه‌ای، reverse proxy واقعی، پیامک، push، نصب PWA روی Android و APK در این محیط اجرا نشده‌اند؛ این سند گزارش تست استقرار نیست.
+تست خودکار، دیتابیس مستقل موقت دارد. مسیر خصوصی سرور، PostgreSQL 16 و reverse proxy مستقل با آزمون مرورگر بررسی شده‌اند؛ نتیجه در `docs/SERVER_DEPLOYMENT.md` است. پیامک، push، HTTPS عمومی، نصب PWA روی Android و APK تست نشده‌اند.

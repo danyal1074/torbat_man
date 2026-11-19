@@ -21,6 +21,10 @@ for(const name of Object.keys(pkg.dependencies).filter(n=>!n.startsWith('@torbat
 }
 await mkdir(join(root,'api'));
 await writeFile(join(root,'api/package.json'),JSON.stringify({name:'torbat-man-runtime',version:'0.1.0',private:true,type:'module',engines:{node:'>=22'},dependencies},null,2));
+const lock=JSON.parse(await readFile('infra/runtime-package-lock.json','utf8'));
+const locked=lock.packages?.['']?.dependencies;
+if(!locked||Object.keys(locked).length!==Object.keys(dependencies).length||Object.entries(dependencies).some(([name,version])=>locked[name]!==version))throw new Error('Runtime dependencies changed. Regenerate and review infra/runtime-package-lock.json before packaging.');
+await writeFile(join(root,'api/package-lock.json'),JSON.stringify(lock,null,2));
 await cp('apps/api/dist',join(root,'api/dist'),{recursive:true});
 await cp('apps/api/drizzle',join(root,'api/drizzle'),{recursive:true});
 await cp('apps/citizen-web/dist',join(root,'web'),{recursive:true});

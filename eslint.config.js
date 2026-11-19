@@ -8,6 +8,7 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
+      '.release/**',
       '**/.data/**',
       '**/storage/**',
       'apps/api/drizzle/**',
