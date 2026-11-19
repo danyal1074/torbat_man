@@ -6,6 +6,7 @@ const source=resolve('.');
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 if(!/^[a-f0-9]{40}$/.test(sha))throw new Error('A committed source revision is required.');
 const root=join(source,'.release',sha);
+await mkdir(dirname(root),{recursive:true});
 await mkdir(root,{recursive:false});
 const pkg=JSON.parse(await readFile('apps/api/package.json','utf8'));
 const require=createRequire(join(source,'apps/api/package.json'));
