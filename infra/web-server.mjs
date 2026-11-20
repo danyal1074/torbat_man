@@ -4,11 +4,11 @@ import { stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 const root=resolve(process.env.STATIC_DIR??'../web');
 const target=new URL(process.env.API_TARGET??'http://127.0.0.1:4181');
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2','.map':'application/json'};
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.woff2':'font/woff2','.map':'application/json'};
 const server=http.createServer(async(req,res)=>{
  res.setHeader('X-Content-Type-Options','nosniff');
  res.setHeader('X-Frame-Options','DENY');
- res.setHeader('Referrer-Policy','same-origin');
+ res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
  if(req.url?.startsWith('/v1/')||['/health','/openapi.json','/docs'].includes(req.url?.split('?')[0])){
   const headers={...req.headers,host:target.host};
   delete headers['x-forwarded-for'];delete headers['x-forwarded-host'];
@@ -32,7 +32,7 @@ const server=http.createServer(async(req,res)=>{
   res.setHeader('Content-Type',types[extname(filename)]??'application/octet-stream');
   res.setHeader('Content-Length',info.size);
   res.setHeader('Cache-Control',pathname.startsWith('/assets/')?'public,max-age=31536000,immutable':'no-cache');
-  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
+  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
   res.writeHead(200);if(req.method==='HEAD'){res.end();return;}createReadStream(filename).pipe(res);
  }catch{if(!res.headersSent)res.writeHead(400);res.end();}
 });

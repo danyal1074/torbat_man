@@ -72,8 +72,15 @@ test('صفحه خانه، کاتالوگ، RTL و عرض‌های ۳۲۰ تا ۱
         await expect(page.locator('.service-tile').first()).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         expect(await page.locator('html').getAttribute('dir')).toBe('rtl');
-        await page.screenshot({ path: `test-results/home-${width}.png`, fullPage: true });
+        await page.screenshot({ path: `test-results/home-${width}.png`, fullPage: true, animations: 'disabled' });
     }
+    await page.getByRole('link', { name: 'آب و فاضلاب', exact: true }).click();
+    await expect(page).toHaveURL(/\/services\?category=water$/);
+    await expect(page.getByRole('heading', { name: 'آب و فاضلاب', exact: true })).toBeVisible();
+    await expect(page.locator('summary').filter({ hasText: 'پرداخت‌ها و قبوض' })).toHaveCount(0);
+    await page.getByRole('link', { name: 'نقشه شهر', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'نمایش نقشه تعاملی' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'OpenStreetMap' })).toHaveAttribute('href', /openstreetmap\.org/);
     await page.goto('/services');
     await expect(page.locator('summary').filter({ hasText: 'پرداخت‌ها و قبوض' })).toBeVisible();
     await page.getByRole('textbox', { name: 'جست‌وجوی خدمت', exact: true }).fill('پرداخت قبض');
@@ -185,7 +192,11 @@ test('پیش‌نویس اطلاعیه فقط پس از انتشار آزمای�
  await expect(article).toContainText('پیش‌نویس');
  const before=await page.request.get('/v1/announcements');expect((await before.json()).data.some((n:{title:string})=>n.title===title)).toBe(false);
  await article.getByRole('button',{name:'انتشار آزمایشی',exact:true}).click();await expect(article).toContainText('منتشرشده آزمایشی');
- await page.goto('/');await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
+ await page.goto('/');
+ const published=page.locator('.city-news-item').filter({hasText:title});
+ await expect(published.getByText(title,{exact:true})).toBeVisible();
+ await published.locator('summary').click();
+ await expect(published).toHaveAttribute('open','');
  await page.goto('/admin/content');await page.locator('.managed-announcement').filter({hasText:title}).getByRole('button',{name:'بایگانی و توقف نمایش'}).click();
  await expect(page.locator('.managed-announcement').filter({hasText:title})).toContainText('بایگانی');
  await page.screenshot({path:'test-results/admin-content.png',fullPage:true});

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@fontsource-variable/vazirmatn";
 @import "@torbat/ui/tokens.css";
+@import "./civic.css";
 
 :root {
   font-family: 'Vazirmatn Variable', 'Vazirmatn', -apple-system, BlinkMacSystemFont, sans-serif;
