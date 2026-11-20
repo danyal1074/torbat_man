@@ -111,20 +111,35 @@ server {
     ssl_certificate /etc/letsencrypt/live/torbat.digiral.ir/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/torbat.digiral.ir/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-    auth_basic "Torbat Man - private demo";
+    auth_basic "Torbat Man - demo login";
     auth_basic_user_file /opt/torbat-man/shared/nginx.htpasswd;
     client_max_body_size 6m;
     add_header Strict-Transport-Security "max-age=86400" always;
     add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header Authorization "";
+    proxy_read_timeout 35s;
+    proxy_send_timeout 35s;
+    proxy_buffering off;
+
+    # Public browsing is open. Demo OTP and any new private routes retain the entry gate.
+    location ~ ^/(?:|index\.html|services(?:/[^/]+)?|city-map|city-news|assistant|support|health|app-icon\.svg|manifest\.webmanifest|registerSW\.js|sw\.js|workbox-[a-z0-9]+\.js|v1/(?:services(?:/[^/]+)?|announcements|ai/assistant))$ {
+        auth_basic off;
+        proxy_pass http://127.0.0.1:4180;
+    }
+    location = /v1/me {
+        auth_basic off;
+        limit_except GET { auth_basic "Torbat Man - demo login"; }
+        proxy_pass http://127.0.0.1:4180;
+    }
+    location ^~ /assets/ {
+        auth_basic off;
+        proxy_pass http://127.0.0.1:4180;
+    }
     location / {
         proxy_pass http://127.0.0.1:4180;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header Authorization "";
-        proxy_read_timeout 35s;
-        proxy_send_timeout 35s;
-        proxy_buffering off;
     }
 }
 NGINX
@@ -141,7 +156,8 @@ assert before==after,'An existing PM2 process changed during setup'
 print('Verified: all pre-existing vhost files and PM2 processes unchanged.')
 PY
 curl -fsS http://127.0.0.1:5000/api/health >/dev/null
-test "$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' --resolve torbat.digiral.ir:443:127.0.0.1 https://torbat.digiral.ir/health)" = 401
+test "$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' --resolve torbat.digiral.ir:443:127.0.0.1 https://torbat.digiral.ir/health)" = 200
+test "$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' --resolve torbat.digiral.ir:443:127.0.0.1 https://torbat.digiral.ir/admin)" = 401
 python3 - <<'PY'
 from pathlib import Path
 import subprocess
@@ -149,4 +165,4 @@ password = next(line.split(': ', 1)[1] for line in Path('/opt/torbat-man/shared/
 subprocess.run(['curl', '-fsS', '--max-time', '10', '--resolve', 'torbat.digiral.ir:443:127.0.0.1', '--config', '-', 'https://torbat.digiral.ir/health'], input=f'user = "torbat:{password}"\n', text=True, check=True)
 PY
 trap - EXIT
-echo 'Torbat Man HTTPS preview enabled behind a private access password.'
+echo 'Torbat Man HTTPS browsing enabled. Demo login remains protected.'
