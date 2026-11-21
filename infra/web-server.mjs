@@ -27,12 +27,19 @@ const server=http.createServer(async(req,res)=>{
   let info=await stat(filename).catch(()=>null);
   if(!info?.isFile()){
    if(extname(pathname)){res.writeHead(404);res.end();return;}
-   filename=resolve(root,'index.html');info=await stat(filename);
+   if(pathname.startsWith('/admin')){
+     const adminFallback=resolve(root,'admin/index.html');
+     const adminInfo=await stat(adminFallback).catch(()=>null);
+     if(adminInfo?.isFile()){filename=adminFallback;info=adminInfo;}
+     else{filename=resolve(root,'index.html');info=await stat(filename);}
+   } else {
+     filename=resolve(root,'index.html');info=await stat(filename);
+   }
   }
   res.setHeader('Content-Type',types[extname(filename)]??'application/octet-stream');
   res.setHeader('Content-Length',info.size);
   res.setHeader('Cache-Control',pathname.startsWith('/assets/')?'public,max-age=31536000,immutable':'no-cache');
-  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
+  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.openstreetmap.org; frame-src 'self' https://www.openstreetmap.org; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
   res.writeHead(200);if(req.method==='HEAD'){res.end();return;}createReadStream(filename).pipe(res);
  }catch{if(!res.headersSent)res.writeHead(400);res.end();}
 });

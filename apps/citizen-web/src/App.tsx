@@ -1,154 +1,315 @@
-import { useEffect, useState } from 'react';
-import { BrowserRouter, useLocation, useNavigate, Link, NavLink, Route, Routes } from 'react-router';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import {
-  Bell, ChevronLeft, ClipboardList, Headphones, Home, LayoutGrid,
-  MapPin, Megaphone, Search, UserRound, type LucideIcon,
-} from 'lucide-react';
+import React, { useState } from 'react';
 import { Logo } from '@torbat/ui';
-import { useMe, Empty, Page } from './lib';
-import { Services, ServiceDetail, Login, Account } from './pages';
-import { Dashboard, CityNews } from './city-dashboard';
-import { CityMap } from './city-map';
-import cityBrand from './city-brand.svg';
-import cityArt from './city-hero.webp';
-import { AdminServices, AdminServiceEditor } from './admin-services';
-import { AdminContent } from './admin-content';
-import { AdminAudit } from './admin-audit';
-import { Support, AdminSupport } from './support';
-import { Assistant } from './assistant';
-import { NewRequest } from './new-request';
-import { Requests, Detail, Notifications } from './requests';
+import {
+  Home,
+  LayoutGrid,
+  Camera,
+  ClipboardList,
+  MapPin,
+  User,
+  Bell,
+  Sparkles,
+} from 'lucide-react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { HomePage } from './pages/HomePage';
+import { ServicesPage } from './pages/ServicesPage';
+import { ServiceDetailPage } from './pages/ServiceDetailPage';
+import { ShahrbinReportPage } from './pages/ShahrbinReportPage';
+import { MyRequestsPage } from './pages/MyRequestsPage';
+import { RequestDetailPage } from './pages/RequestDetailPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { CityMapPage } from './pages/CityMapPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { AiAssistantModal } from './components/AiAssistantModal';
+import { api } from './api/client';
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true } },
-});
+export type NavTab = 'home' | 'services' | 'report' | 'requests' | 'map' | 'profile';
 
-type NavItem = [LucideIcon, string, string];
-const citizenNav: NavItem[] = [
-  [Home, 'خانه', '/'], [LayoutGrid, 'خدمات', '/services'],
-  [ClipboardList, 'درخواست‌ها', '/requests'], [MapPin, 'نقشه', '/city-map'],
-  [UserRound, 'پروفایل', '/account'],
-];
-const citizenSidebar: NavItem[] = [
-  ...citizenNav.slice(0, 2), [Megaphone, 'گزارش مشکل شهری', '/new'],
-  [ClipboardList, 'درخواست‌های من', '/requests'], [MapPin, 'نقشه شهر', '/city-map'],
-  [Bell, 'اعلان‌ها', '/notifications'], [Headphones, 'راهنما و پشتیبانی', '/support'],
-];
+function AppContent() {
+  const { user } = useAuth();
+  const [currentTab, setCurrentTab] = useState<NavTab>('home');
+  const [activeServiceSlug, setActiveServiceSlug] = useState<string | null>(null);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-function CivicBrand({ compact = false }: { compact?: boolean }) {
-  return <Link to="/" className={'civic-brand' + (compact ? ' civic-brand-compact' : '')} aria-label="تربت من، خانه">
-    <img src={cityBrand} alt=""/>
-    <strong>تربت من</strong>
-    {!compact && <span>درگاه خدمات شهروندی<br/>تربت حیدریه</span>}
-  </Link>;
-}
+  // Poll notifications count
+  React.useEffect(() => {
+    api.getNotifications()
+      .then((res: any) => {
+        setUnreadCount(res.meta?.unreadCount || 0);
+      })
+      .catch(() => {});
+  }, [user, currentTab]);
 
-function HeaderSearch() {
-  const [query, setQuery] = useState('');
-  const navigate = useNavigate();
+  const handleNavigate = (page: string, params?: Record<string, any>) => {
+    if (page === 'services') {
+      setActiveServiceSlug(null);
+      setCurrentTab('services');
+    } else if (page === 'service-detail' && params?.slug) {
+      setActiveServiceSlug(params.slug);
+      setCurrentTab('services');
+    } else if (page === 'report') {
+      setCurrentTab('report');
+    } else if (page === 'requests') {
+      setActiveRequestId(null);
+      setCurrentTab('requests');
+    } else if (page === 'request-detail' && params?.id) {
+      setActiveRequestId(params.id);
+      setCurrentTab('requests');
+    } else if (page === 'notifications') {
+      setActiveRequestId(null);
+      setCurrentTab('home');
+    } else if (page === 'map') {
+      setCurrentTab('map');
+    } else if (page === 'profile') {
+      setCurrentTab('profile');
+    } else {
+      setActiveServiceSlug(null);
+      setActiveRequestId(null);
+      setCurrentTab('home');
+    }
+  };
 
-  return <form className="civic-header-search" role="search" onSubmit={event => {
-    event.preventDefault();
-    navigate(query.trim() ? '/services?q=' + encodeURIComponent(query.trim()) : '/services');
-  }}>
-    <button type="submit" aria-label="جست‌وجو"><Search size={23}/></button>
-    <input aria-label="جست‌وجوی خدمات" value={query} onChange={event => setQuery(event.target.value)} placeholder="جست‌وجو در خدمات و راهنما…"/>
-  </form>;
-}
+  return (
+    <div className="min-h-screen bg-[#F5F3F8]/50 text-slate-900 font-sans antialiased selection:bg-purple-100 selection:text-purple-900 flex justify-center">
+      {/* Container simulating a refined mobile & desktop app experience */}
+      <div className="w-full max-w-md md:max-w-xl min-h-screen bg-[#FAFAFC] shadow-xl flex flex-col relative border-x border-slate-200/60">
+        
+        {/* Top App Bar */}
+        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-150 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavigate('home')}>
+            <Logo variant="horizontal" size={32} />
+          </div>
 
-function Navigation({ items, label }: { items: NavItem[]; label: string }) {
-  return <nav aria-label={label}>{items.map(([Icon, name, path]) => <NavLink
-    end={path === '/' || path === '/admin'} to={path === '/new' ? '/new?kind=city_report' : path} key={path}
-  ><Icon size={21}/><span>{name}</span></NavLink>)}</nav>;
-}
+          <div className="flex items-center gap-1.5">
+            {/* AI Assistant Button */}
+            <button
+              onClick={() => setIsAiModalOpen(true)}
+              className="p-2 rounded-xl text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors relative"
+              title="دستیار هوشمند شهری"
+            >
+              <Sparkles size={18} />
+            </button>
 
-function Shell() {
-  const location = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
-  const admin = location.pathname.startsWith('/admin');
-  const home = location.pathname === '/';
-  const me = useMe(admin);
-  const env = useQuery({
-    queryKey: ['environment'],
-    queryFn: async () => {
-      const result = await fetch('/health');
-      if (!result.ok) throw new Error();
-      return result.json() as Promise<{ appEnv: string }>;
-    },
-  });
-  const staffNav: NavItem[] = [[ClipboardList, 'کارتابل', '/admin'], [UserRound, 'حساب کارشناس', '/admin/account']];
-  const manager = me.data?.memberships?.some(membership => membership.role === 'org_manager');
-  const role = me.data?.platformRole;
-  if (admin) {
-    if (role === 'platform_admin' || manager) staffNav.push([LayoutGrid, 'مدیریت خدمات', '/admin/services']);
-    if (role === 'content_editor' || role === 'platform_admin' || manager) staffNav.push([Bell, 'اطلاعیه‌ها', '/admin/content']);
-    if (role === 'platform_admin' || role === 'support_agent') staffNav.push([ClipboardList, 'پشتیبانی', '/admin/support']);
-    if (role === 'platform_admin' || manager) staffNav.push([ClipboardList, 'گزارش فعالیت', '/admin/audit']);
-  }
+            {/* Notifications Button */}
+            <button
+              onClick={() => {
+                setActiveRequestId(null);
+                setActiveServiceSlug(null);
+                setCurrentTab('home');
+                handleNavigate('notifications');
+              }}
+              className="p-2 rounded-xl text-slate-600 hover:text-purple-700 hover:bg-slate-100 transition-colors relative"
+              title="اعلان‌ها"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
+              )}
+            </button>
+          </div>
+        </header>
 
-  return <div className={admin ? 'app admin-app' : 'app citizen-app'}>
-    <aside className="sidebar">
-      {admin ? <>
-        <Link to="/admin" className="brand"><Logo size={44}/></Link>
-        <p className="sidebar-caption">میز کار سازمانی</p>
-      </> : <CivicBrand/>}
-      <Navigation items={admin ? staffNav : citizenSidebar} label={admin ? 'ناوبری مدیریت' : 'ناوبری شهروندی'}/>
-      {admin ? <div className="sidebar-bottom"><MapPin size={18}/><span>تربت حیدریه</span></div> : <div className="civic-sidebar-art" aria-hidden="true"><img src={cityArt} alt=""/></div>}
-    </aside>
-    <div className="main-area">
-      <header className={!admin && home ? 'civic-home-header' : undefined}>
-        {admin ? <>
-          <Link to="/admin" className="mobile-brand"><Logo size={35}/></Link>
-          <span className="desktop-title">پنل رسیدگی سازمان‌ها</span>
-        </> : <>
-          <CivicBrand compact/>
-          {home ? <HeaderSearch/> : <Link className="civic-back" to="/">خانه <ChevronLeft size={18}/></Link>}
-        </>}
-        <div className="header-actions">
-          {!admin && <Link aria-label="اعلان‌ها" to="/notifications"><Bell size={21}/></Link>}
-          <Link aria-label="حساب کاربری" to={admin ? '/admin/account' : '/account'}><UserRound size={21}/><span>{me.data?.displayName ?? 'حساب من'}</span></Link>
-        </div>
-      </header>
-      {env.isError ? <div className="environment" role="status">ارتباط با سرور برقرار نیست. پس از اتصال دوباره تلاش کنید.</div>
-        : env.data?.appEnv && env.data.appEnv !== 'production' && <div className="environment">
-          <span className="env-dot"/> نسخه آزمایشی <span className="environment-note"> · اتصال رسمی ادارات و پیامک فعال نیست</span>
-        </div>}
-      <main id="main" className={!admin && home ? 'civic-home-main' : undefined}>
-        <Routes>
-          <Route path="/" element={<Dashboard/>}/>
-          <Route path="/services" element={<Services/>}/>
-          <Route path="/services/:slug" element={<ServiceDetail/>}/>
-          <Route path="/city-map" element={<CityMap/>}/>
-          <Route path="/city-news" element={<Page title="خبرهای تربت حیدریه"><CityNews/></Page>}/>
-          <Route path="/support" element={<Support/>}/>
-          <Route path="/assistant" element={<Assistant/>}/>
-          <Route path="/new" element={<NewRequest/>}/>
-          <Route path="/requests" element={<Requests/>}/>
-          <Route path="/requests/:id" element={<Detail/>}/>
-          <Route path="/notifications" element={<Notifications/>}/>
-          <Route path="/account" element={<Account/>}/>
-          <Route path="/login" element={<Login/>}/>
-          <Route path="/admin" element={<Requests admin/>}/>
-          <Route path="/admin/services" element={<AdminServices/>}/>
-          <Route path="/admin/services/:slug" element={<AdminServiceEditor/>}/>
-          <Route path="/admin/content" element={<AdminContent/>}/>
-          <Route path="/admin/support" element={<AdminSupport/>}/>
-          <Route path="/admin/audit" element={<AdminAudit/>}/>
-          <Route path="/admin/requests/:id" element={<Detail admin/>}/>
-          <Route path="/admin/account" element={<Account admin/>}/>
-          <Route path="/admin/login" element={<Login admin/>}/>
-          <Route path="*" element={<Empty>صفحه پیدا نشد. <Link to="/">بازگشت به خانه</Link></Empty>}/>
-        </Routes>
-      </main>
-      <footer>تربت من <span>·</span> درگاه خدمات شهروندی</footer>
+        {/* Main Content Area */}
+        <main className="flex-1 px-4 py-3 overflow-y-auto">
+          {/* Home */}
+          {currentTab === 'home' && (
+            <HomePage onNavigate={handleNavigate} />
+          )}
+
+          {/* Services */}
+          {currentTab === 'services' && !activeServiceSlug && (
+            <ServicesPage
+              onSelectService={(slug) => {
+                setActiveServiceSlug(slug);
+              }}
+            />
+          )}
+
+          {/* Service Detail */}
+          {currentTab === 'services' && activeServiceSlug && (
+            <ServiceDetailPage
+              slug={activeServiceSlug}
+              onBack={() => setActiveServiceSlug(null)}
+              onNavigateRequest={(id) => {
+                setActiveServiceSlug(null);
+                setActiveRequestId(id);
+                setCurrentTab('requests');
+              }}
+            />
+          )}
+
+          {/* Shahrbin Citizen Report */}
+          {currentTab === 'report' && (
+            <ShahrbinReportPage
+              onBack={() => setCurrentTab('home')}
+              onNavigateRequest={(id) => {
+                setActiveRequestId(id);
+                setCurrentTab('requests');
+              }}
+            />
+          )}
+
+          {/* My Requests List */}
+          {currentTab === 'requests' && !activeRequestId && (
+            <MyRequestsPage
+              onNavigateRequest={(id) => setActiveRequestId(id)}
+              onNewReport={() => setCurrentTab('report')}
+            />
+          )}
+
+          {/* Request Detail */}
+          {currentTab === 'requests' && activeRequestId && (
+            <RequestDetailPage
+              id={activeRequestId}
+              onBack={() => setActiveRequestId(null)}
+            />
+          )}
+
+          {/* City Map */}
+          {currentTab === 'map' && (
+            <CityMapPage />
+          )}
+
+          {/* Citizen Profile & Settings */}
+          {currentTab === 'profile' && (
+            <ProfilePage
+              onNavigateMap={() => setCurrentTab('map')}
+              onNavigateRequests={() => {
+                setActiveRequestId(null);
+                setCurrentTab('requests');
+              }}
+            />
+          )}
+        </main>
+
+        {/* Fixed Bottom Navigation (Blu Style) */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+          <div className="w-full max-w-md md:max-w-xl bg-white/95 backdrop-blur-lg border-t border-slate-200/80 px-2 py-2 flex items-center justify-around shadow-2xl pointer-events-auto">
+            
+            {/* 1. Home */}
+            <button
+              onClick={() => {
+                setActiveServiceSlug(null);
+                setActiveRequestId(null);
+                setCurrentTab('home');
+              }}
+              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all ${
+                currentTab === 'home'
+                  ? 'text-[#7541A5] font-bold'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Home size={20} className={currentTab === 'home' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+              <span className="text-[10px]">خانه</span>
+            </button>
+
+            {/* 2. Services */}
+            <button
+              onClick={() => {
+                setActiveServiceSlug(null);
+                setActiveRequestId(null);
+                setCurrentTab('services');
+              }}
+              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all ${
+                currentTab === 'services'
+                  ? 'text-[#7541A5] font-bold'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <LayoutGrid size={20} className={currentTab === 'services' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+              <span className="text-[10px]">خدمات</span>
+            </button>
+
+            {/* 3. Central Report Button (Elevated) */}
+            <button
+              onClick={() => {
+                setActiveServiceSlug(null);
+                setActiveRequestId(null);
+                setCurrentTab('report');
+              }}
+              className="flex flex-col items-center -mt-6 group"
+            >
+              <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#592582] to-[#7541A5] text-white flex items-center justify-center shadow-lg shadow-purple-900/30 group-hover:scale-105 group-active:scale-95 transition-all border-2 border-white">
+                <Camera size={22} className="stroke-[2.2]" />
+              </div>
+              <span className="text-[10px] font-bold text-[#7541A5] mt-1">شهربین</span>
+            </button>
+
+            {/* 4. Requests */}
+            <button
+              onClick={() => {
+                setActiveServiceSlug(null);
+                setActiveRequestId(null);
+                setCurrentTab('requests');
+              }}
+              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all ${
+                currentTab === 'requests'
+                  ? 'text-[#7541A5] font-bold'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <ClipboardList size={20} className={currentTab === 'requests' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+              <span className="text-[10px]">پیگیری</span>
+            </button>
+
+            {/* 5. Map */}
+            <button
+              onClick={() => {
+                setActiveServiceSlug(null);
+                setActiveRequestId(null);
+                setCurrentTab('map');
+              }}
+              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all ${
+                currentTab === 'map'
+                  ? 'text-[#7541A5] font-bold'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <MapPin size={20} className={currentTab === 'map' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+              <span className="text-[10px]">نقشه</span>
+            </button>
+
+            {/* 6. Profile */}
+            <button
+              onClick={() => {
+                setActiveServiceSlug(null);
+                setActiveRequestId(null);
+                setCurrentTab('profile');
+              }}
+              className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all ${
+                currentTab === 'profile'
+                  ? 'text-[#7541A5] font-bold'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <User size={20} className={currentTab === 'profile' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
+              <span className="text-[10px]">پروفایل</span>
+            </button>
+          </div>
+        </nav>
+
+        {/* Global AI Assistant Modal */}
+        <AiAssistantModal
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          onSelectService={(slug) => {
+            setActiveServiceSlug(slug);
+            setCurrentTab('services');
+          }}
+        />
+      </div>
     </div>
-    {!admin && <div className="bottom-nav"><Navigation items={citizenNav} label="ناوبری اصلی"/></div>}
-  </div>;
+  );
 }
 
-export default function App() {
-  return <QueryClientProvider client={queryClient}>
-    <BrowserRouter><a className="skip-link" href="#main">رفتن به محتوای اصلی</a><Shell/></BrowserRouter>
-  </QueryClientProvider>;
+export function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }
+
+export default App;

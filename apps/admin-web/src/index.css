@@ -1,0 +1,36 @@
+@import "tailwindcss";
+@import "@fontsource-variable/vazirmatn";
+
+@theme {
+  --font-sans: 'Vazirmatn Variable', system-ui, -apple-system, sans-serif;
+  --color-brand-primary: #7541A5;
+  --color-brand-dark: #592582;
+  --color-brand-tint: #F5F3F8;
+  --color-brand-saffron: #F0B52E;
+}
+
+body {
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  direction: rtl;
+  background-color: #F8F9FA;
+  color: #20212A;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

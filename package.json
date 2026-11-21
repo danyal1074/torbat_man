@@ -1,9 +1,9 @@
 {
-  "name": "torbat-man",
+  "name": "torbat-now",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "تربت من — سوپراپلیکیشن شهروندی تربت حیدریه",
+  "description": "تربت نو — سوپراپلیکیشن شهروندی و خدمات یکپارچه شهری تربت حیدریه",
   "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=22"

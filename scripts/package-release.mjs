@@ -34,6 +34,7 @@ await writeFile(join(root,'api/package-lock.json'),JSON.stringify(lock,null,2));
 await cp('apps/api/dist',join(root,'api/dist'),{recursive:true});
 await cp('apps/api/drizzle',join(root,'api/drizzle'),{recursive:true});
 await cp('apps/citizen-web/dist',join(root,'web'),{recursive:true});
+await cp('apps/admin-web/dist',join(root,'web/admin'),{recursive:true});
 await cp('infra',join(root,'infra'),{recursive:true});
 await writeFile(join(root,'release.json'),JSON.stringify({commit:sha,builtAt:new Date().toISOString(),environment:'private-demo'},null,2));
 console.log(root);
