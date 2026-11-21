@@ -76,43 +76,45 @@ function AppContent() {
       {/* Container simulating a refined mobile & desktop app experience */}
       <div className="w-full max-w-md md:max-w-xl min-h-screen bg-[#FAFAFC] shadow-xl flex flex-col relative border-x border-slate-200/60">
         
-        {/* Top App Bar */}
-        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-150 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavigate('home')}>
-            <Logo variant="horizontal" size={32} />
-          </div>
+        {/* Top App Bar (Hidden on Services tab to present the dedicated reference header) */}
+        {currentTab !== 'services' && (
+          <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-150 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavigate('home')}>
+              <Logo variant="horizontal" size={32} />
+            </div>
 
-          <div className="flex items-center gap-1.5">
-            {/* AI Assistant Button */}
-            <button
-              onClick={() => setIsAiModalOpen(true)}
-              className="p-2 rounded-xl text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors relative"
-              title="دستیار هوشمند شهری"
-            >
-              <Sparkles size={18} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* AI Assistant Button */}
+              <button
+                onClick={() => setIsAiModalOpen(true)}
+                className="p-2 rounded-xl text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors relative"
+                title="دستیار هوشمند شهری"
+              >
+                <Sparkles size={18} />
+              </button>
 
-            {/* Notifications Button */}
-            <button
-              onClick={() => {
-                setActiveRequestId(null);
-                setActiveServiceSlug(null);
-                setCurrentTab('home');
-                handleNavigate('notifications');
-              }}
-              className="p-2 rounded-xl text-slate-600 hover:text-purple-700 hover:bg-slate-100 transition-colors relative"
-              title="اعلان‌ها"
-            >
-              <Bell size={18} />
-              {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
-              )}
-            </button>
-          </div>
-        </header>
+              {/* Notifications Button */}
+              <button
+                onClick={() => {
+                  setActiveRequestId(null);
+                  setActiveServiceSlug(null);
+                  setCurrentTab('home');
+                  handleNavigate('notifications');
+                }}
+                className="p-2 rounded-xl text-slate-600 hover:text-purple-700 hover:bg-slate-100 transition-colors relative"
+                title="اعلان‌ها"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
+                )}
+              </button>
+            </div>
+          </header>
+        )}
 
         {/* Main Content Area */}
-        <main className="flex-1 px-4 py-3 overflow-y-auto">
+        <main className={`flex-1 overflow-y-auto ${currentTab === 'services' && !activeServiceSlug ? 'px-4 py-3' : 'px-4 py-3'}`}>
           {/* Home */}
           {currentTab === 'home' && (
             <HomePage onNavigate={handleNavigate} />
@@ -124,6 +126,10 @@ function AppContent() {
               onSelectService={(slug) => {
                 setActiveServiceSlug(slug);
               }}
+              onNavigateHome={() => setCurrentTab('home')}
+              onNavigateReport={() => setCurrentTab('report')}
+              onNavigateAssistant={() => setIsAiModalOpen(true)}
+              onNavigateMap={() => setCurrentTab('map')}
             />
           )}
 
