@@ -132,7 +132,7 @@ export const ServiceDetailPage: React.FC<ServiceDetailPageProps> = ({
           <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-[11px] text-amber-800 leading-relaxed">
             <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
             <span>
-              <strong>نیازمند اتصال رسمی:</strong> اتصال سیستمی به این اداره در مرحله هماهنگی است؛ ثبت فعلی به عنوان پیش‌نویس در سامانه تربت نو بایگانی می‌شود.
+              <strong>نیازمند اتصال رسمی:</strong> اتصال سیستمی به این اداره در مرحله هماهنگی است؛ ثبت فعلی به عنوان پیش‌نویس در سامانه تربتینو بایگانی می‌شود.
             </span>
           </div>
         )}
@@ -207,7 +207,7 @@ export const ServiceDetailPage: React.FC<ServiceDetailPageProps> = ({
           </div>
 
           <div className="flex flex-col gap-1">
-            <h4 className="text-sm font-extrabold text-[#33313A]">درخواست شما در سیستم تربت نو ثبت گردید</h4>
+            <h4 className="text-sm font-extrabold text-[#33313A]">درخواست شما در سیستم تربتینو ثبت گردید</h4>
             <p className="text-xs text-[#667085]">
               کد پیگیری زیر را برای پیگیری‌های بعدی یادداشت یا کپی کنید:
             </p>

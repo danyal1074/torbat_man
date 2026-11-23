@@ -100,7 +100,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           {greeting()}، {user?.displayName || 'شهروند گرامی'} 👋
         </h2>
         <p className="text-xs text-[#667085] flex items-center gap-1.5">
-          <span className="font-semibold text-[#7541A5]">تربت نو؛</span>
+          <span className="font-semibold text-[#7541A5]">تربتینو؛</span>
           <span>شهر تو، همراه تو</span>
         </p>
       </div>
@@ -200,7 +200,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             <Sparkles className="w-5 h-5 fill-current" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-[#33313A]">دستیار هوشمند تربت نو</span>
+            <span className="text-xs font-bold text-[#33313A]">دستیار هوشمند تربتینو</span>
             <span className="text-[11px] text-[#667085]">نمی‌دونی کدوم فرم رو پر کنی؟ از من بپرس!</span>
           </div>
         </div>

@@ -28,7 +28,7 @@ export default function ServicesPage() {
 
   return (
     <main className="page-enter">
-      <PageHeader title="همه خدمات" subtitle="دسته‌بندی کامل خدمات تربت‌نو">
+      <PageHeader title="همه خدمات" subtitle="دسته‌بندی کامل خدمات تربتینو">
         <SearchField value={query} onChange={setQuery} />
       </PageHeader>
       <div className="content" aria-live="polite">

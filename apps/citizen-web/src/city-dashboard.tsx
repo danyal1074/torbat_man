@@ -101,12 +101,12 @@ export function Dashboard() {
     <div className="civic-center">
       <div className="civic-mobile-greeting">
         <strong>سلام {me.data?.displayName || 'همشهری عزیز'} <span aria-hidden="true">👋</span></strong>
-        <span>به تربت من خوش آمدید</span>
+        <span>به تربتینو خوش آمدید</span>
       </div>
       <section className="civic-hero" aria-labelledby="city-hero-title">
         <img src={cityHero} alt="" fetchPriority="high"/>
         <div className="hero-copy">
-          <h1 id="city-hero-title">تربت من</h1>
+          <h1 id="city-hero-title">تربتینو</h1>
           <p>همه خدمات شهر در یک سامانه</p>
         </div>
       </section>
@@ -138,7 +138,7 @@ export function Dashboard() {
       <div className="civic-lower">
         <RecentRequests/>
         <section className="civic-surface civic-assistant">
-          <div className="civic-section-title"><h2>دستیار تربت من</h2><span className="civic-demo-chip">آزمایشی</span></div>
+          <div className="civic-section-title"><h2>دستیار تربتینو</h2><span className="civic-demo-chip">آزمایشی</span></div>
           <div className="assistant-preview"><span className="assistant-mascot"><Bot aria-hidden="true" size={42}/></span>
             <Link to="/assistant" className="assistant-start"><Search size={18}/> سوال خود را بپرسید <ChevronLeft size={17}/></Link>
           </div>

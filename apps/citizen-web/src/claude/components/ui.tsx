@@ -6,9 +6,9 @@ import { useDisabledServices } from '../state/notifications';
 
 export function Brand() {
   return (
-    <Link to="/services" className="brand" aria-label="تربت‌نو؛ شهر تو، همراه تو">
+    <Link to="/services" className="brand" aria-label="تربتینو؛ شهر تو، همراه تو">
       <img src="/logo-mark.png" alt="" width={44} height={44} />
-      <span className="brand-text"><span className="brand-name">تربت‌نو</span><span className="brand-en" aria-hidden="true">TORBAT NOW</span></span>
+      <span className="brand-text"><span className="brand-name">تربتینو</span><span className="brand-en" aria-hidden="true">TORBATINO</span></span>
     </Link>
   );
 }

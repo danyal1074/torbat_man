@@ -35,7 +35,7 @@ export const ServicesManagementPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-black text-slate-800">مدیریت خدمات و گردش‌کارهای شهری</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            کاتالوگ ۴۴ خدمت سامانه تربت نو و وضعیت اتصال آن‌ها به ادارات
+            کاتالوگ ۴۴ خدمت سامانه تربتینو و وضعیت اتصال آن‌ها به ادارات
           </p>
         </div>
 

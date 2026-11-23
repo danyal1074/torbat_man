@@ -13,7 +13,7 @@ export function Assistant() {
             title: string;
         }[];
     }>();
-    return <Page title="دستیار تربت من"><div className="panel narrow civic-assistant-page"><div className="assistant-banner"><span className="assistant-mascot"><Bot size={47} aria-hidden="true"/></span><h2>برای انجام چه کاری کمک می‌خواهید؟</h2><p>خدمت مناسب را از میان پیشنهادهای آزمایشی پیدا کنید.</p></div><p className="notice">این نسخه از جست‌وجوی واژه‌محور استفاده می‌کند؛ مدل زبانی و دانش‌نامه رسمی به آن متصل نیست. برای مدارک، هزینه یا مهلت رسیدگی فقط اطلاعات تأییدشده معتبر است.</p><form onSubmit={async (e) => { e.preventDefault(); setBusy(true); setError(''); try {
+    return <Page title="دستیار تربتینو"><div className="panel narrow civic-assistant-page"><div className="assistant-banner"><span className="assistant-mascot"><Bot size={47} aria-hidden="true"/></span><h2>برای انجام چه کاری کمک می‌خواهید؟</h2><p>خدمت مناسب را از میان پیشنهادهای آزمایشی پیدا کنید.</p></div><p className="notice">این نسخه از جست‌وجوی واژه‌محور استفاده می‌کند؛ مدل زبانی و دانش‌نامه رسمی به آن متصل نیست. برای مدارک، هزینه یا مهلت رسیدگی فقط اطلاعات تأییدشده معتبر است.</p><form onSubmit={async (e) => { e.preventDefault(); setBusy(true); setError(''); try {
         const r = await call<{
             data: {
                 reply: string;

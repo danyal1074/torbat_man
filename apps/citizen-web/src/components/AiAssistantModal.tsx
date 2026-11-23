@@ -20,7 +20,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({ isOpen, onCl
     }>>([
         {
             sender: 'assistant',
-            text: 'سلام! من دستیار هوشمند تربت من هستم. مسئله یا درخواستی که در شهر داری رو به زبان ساده بگو تا راهنماییت کنم.',
+            text: 'سلام! من دستیار هوشمند تربتینو هستم. مسئله یا درخواستی که در شهر داری رو به زبان ساده بگو تا راهنماییت کنم.',
         },
     ]);
     const handleSend = async (e?: React.FormEvent) => {
@@ -55,7 +55,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({ isOpen, onCl
             setLoading(false);
         }
     };
-    return (<Dialog isOpen={isOpen} onClose={onClose} title="دستیار هوشمند تربت من">
+    return (<Dialog isOpen={isOpen} onClose={onClose} title="دستیار هوشمند تربتینو">
       <div className="flex flex-col gap-4 min-h-[340px]">
         {/* Messages scroll */}
         <div className="flex-1 flex flex-col gap-3 overflow-y-auto max-h-[380px] p-1">

@@ -250,7 +250,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-amber-900">
         <Sparkles size={20} className="text-amber-600 shrink-0 mt-0.5" />
         <div className="text-xs leading-relaxed space-y-1">
-          <h4 className="font-bold text-amber-950">تعهدنامه سطح خدمات (SLA) سامانه تربت نو</h4>
+          <h4 className="font-bold text-amber-950">تعهدنامه سطح خدمات (SLA) سامانه تربتینو</h4>
           <p>
             حداکثر زمان تعیین‌تکلیف و تریاژ پرونده‌های شهروندی ۴ ساعت کاری و زمان رفع مشکلات فوری حداکثر ۷۲ ساعت است. پس از اتمام اقدام کارشناس، پرونده وارد وضعیت «حل‌شده» شده و پیامک رضایت‌سنجی برای شهروند ارسال می‌گردد.
           </p>

@@ -23,7 +23,7 @@ export function HomePage() {
     <main className="page-enter">
       <header className="hero hero-home">
         <div className="hero-inner"><Brand /><span /><Link to="/notifications" className="icon-btn bell" aria-label={unread ? `اعلان‌ها (${faDigits(unread)} خوانده‌نشده)` : 'اعلان‌ها'}><Bell size={22} aria-hidden="true" />{unread > 0 && <span className="badge-dot" aria-hidden="true">{faDigits(unread)}</span>}</Link></div>
-        <div className="hero-greet"><h1>{user?.name ? `سلام ${user.name}` : 'سلام، به تربت‌نو خوش آمدید'}</h1><p>شهر تو، همراه تو</p></div>
+        <div className="hero-greet"><h1>{user?.name ? `سلام ${user.name}` : 'سلام، به تربتینو خوش آمدید'}</h1><p>شهر تو، همراه تو</p></div>
       </header>
       <div className="search-wrap"><form className="search" role="search" onSubmit={submit}>
         <Search size={22} aria-hidden="true" /><label htmlFor="home-q" className="sr-only">جست‌وجوی خدمت</label>
@@ -50,7 +50,7 @@ export function SearchPage() {
   const res = useMemo(() => (n ? allServices.filter((s) => matchesQuery(`${s.title} ${s.category.title} ${s.provider}`, n)) : []), [n]);
   return (
     <main className="page-enter">
-      <PageHeader title="جست‌وجو" subtitle="در همه خدمات تربت‌نو"><SearchField value={q} onChange={setQ} /></PageHeader>
+      <PageHeader title="جست‌وجو" subtitle="در همه خدمات تربتینو"><SearchField value={q} onChange={setQ} /></PageHeader>
       <div className="content" aria-live="polite">
         {!n ? <EmptyState title="چه خدمتی لازم دارید؟" text="نام خدمت، سازمان یا موضوع را بنویسید؛ مثلاً «نان» یا «زعفران»." />
           : res.length ? <section className="panel lilac" aria-label="نتایج"><p className="sr-only">{faDigits(res.length)} نتیجه</p><div className="grid">{res.map((s) => <ServiceCard key={s.id} service={s} />)}</div></section>
@@ -184,7 +184,7 @@ export function AccountPage() {
       <div className="sheet">
         {!user ? <Unauthorized /> : (<>
           <div className="profile-card"><span className="avatar"><UserRound size={34} aria-hidden="true" /></span>
-            <div className="rtxt"><strong>{user.name || 'کاربر تربت‌نو'}</strong><small dir="ltr" style={{ textAlign: 'right' }}>{user.phone}</small></div></div>
+            <div className="rtxt"><strong>{user.name || 'کاربر تربتینو'}</strong><small dir="ltr" style={{ textAlign: 'right' }}>{user.phone}</small></div></div>
           <nav className="menu" aria-label="حساب کاربری">
             <MenuItem to="/account/edit" icon={UserPen} title="ویرایش اطلاعات" />
             <MenuItem to="/requests" icon={ClipboardList} title="درخواست‌های من" />
@@ -196,7 +196,7 @@ export function AccountPage() {
           <MenuItem to="/account/settings" icon={Settings} title="تنظیمات" hint="اندازه متن و حرکت" />
           <MenuItem to="/account/privacy" icon={ShieldCheck} title="حریم خصوصی" />
           <MenuItem to="/account/support" icon={HelpCircle} title="پشتیبانی و راهنما" />
-          <MenuItem to="/welcome" icon={Sparkles} title="معرفی تربت‌نو" />
+          <MenuItem to="/welcome" icon={Sparkles} title="معرفی تربتینو" />
           <MenuItem to="/admin" icon={LayoutDashboard} title="پنل مدیریت" hint="نمای مدیر و کارشناس سازمان" />
         </nav>
         {user && <button type="button" className="btn-ghost danger-btn" onClick={() => setAsk(true)}><LogOut size={18} aria-hidden="true" />خروج از حساب</button>}
@@ -302,7 +302,7 @@ export function WelcomePage() {
   ];
   return (
     <main className="welcome page-enter">
-      <img src="/logo-mark.png" alt="تربت‌نو" width={120} height={120} />
+      <img src="/logo-mark.png" alt="تربتینو" width={120} height={120} />
       <h1>{slides[i].t}</h1><p>{slides[i].d}</p>
       <div className="dots" role="tablist" aria-label="اسلایدها">{slides.map((_, k) => <button key={k} role="tab" aria-selected={k === i} aria-label={`اسلاید ${faDigits(k + 1)}`} className={k === i ? 'on' : ''} onClick={() => setI(k)} />)}</div>
       <div className="stack full">

@@ -43,15 +43,15 @@ export const ServicesHeader: React.FC<ServicesHeaderProps> = ({
             همه خدمات
           </h1>
           <p className="text-[11px] text-[#E8D4F4] font-medium mt-0.5">
-            دسته‌بندی کامل خدمات تربت‌نو
+            دسته‌بندی کامل خدمات تربتینو
           </p>
         </div>
 
-        {/* Right: Torbat Now Logo */}
+        {/* Right: Torbatino Logo */}
         <div className="flex items-center justify-end">
           <img
             src="/brand/horizontal-logo-transparent.png"
-            alt="تربت نو"
+            alt="تربتینو"
             className="h-8 object-contain brightness-0 invert"
           />
         </div>

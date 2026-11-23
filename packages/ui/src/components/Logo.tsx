@@ -22,7 +22,7 @@ export const Logo: React.FC<LogoProps> = ({
     return (
       <img
         src={imageSrc}
-        alt="تربت نو | Torbat Now"
+        alt="تربتینو | Torbatino"
         style={{ height: size, objectFit: 'contain' }}
         className={`shrink-0 ${className}`}
         onError={() => setImgError(true)}
@@ -37,7 +37,7 @@ export const Logo: React.FC<LogoProps> = ({
         {!imgError ? (
           <img
             src="/brand/horizontal-logo-transparent.png"
-            alt="تربت نو"
+            alt="تربتینو"
             style={{ height: size, objectFit: 'contain' }}
             onError={() => setImgError(true)}
           />
@@ -66,11 +66,10 @@ export const Logo: React.FC<LogoProps> = ({
             {showText && (
               <div className="flex flex-col text-right leading-tight">
                 <div className="flex items-baseline gap-1 font-extrabold text-base tracking-tight">
-                  <span className="text-[#F0B52E]">نو</span>
-                  <span className="text-[#7541A5]">تربت</span>
+                  <span className="text-[#7541A5]">تربتینو</span>
                 </div>
                 <span className="text-[9px] font-semibold text-slate-400 tracking-wider">
-                  — TORBAT NOW —
+                  — TORBATINO —
                 </span>
               </div>
             )}
@@ -85,7 +84,7 @@ export const Logo: React.FC<LogoProps> = ({
     return (
       <img
         src="/brand/app-icon.png"
-        alt="تربت نو"
+        alt="تربتینو"
         style={{ width: size, height: size, objectFit: 'contain' }}
         className={`rounded-2xl shadow-sm ${className}`}
         onError={() => setImgError(true)}
@@ -99,7 +98,7 @@ export const Logo: React.FC<LogoProps> = ({
       {!imgError ? (
         <img
           src="/brand/full-logo-transparent.png"
-          alt="تربت نو | Torbat Now"
+          alt="تربتینو | Torbatino"
           style={{ height: size, objectFit: 'contain' }}
           onError={() => setImgError(true)}
         />
@@ -119,11 +118,10 @@ export const Logo: React.FC<LogoProps> = ({
             <path d="M 12 36 Q 24 34 36 30 L 36 33 Q 24 37 12 40 Z" fill="#F0B52E" />
           </svg>
           <div className="flex items-baseline gap-1 font-black text-xl tracking-tight mt-1">
-            <span className="text-[#F0B52E]">نو</span>
-            <span className="text-[#7541A5]">تربت</span>
+            <span className="text-[#7541A5]">تربتینو</span>
           </div>
           <span className="text-[10px] font-bold text-slate-400 tracking-widest mt-0.5">
-            — TORBAT NOW —
+            — TORBATINO —
           </span>
           <span className="text-[11px] font-medium text-slate-500 mt-1">
             شهر تو، همراه تو

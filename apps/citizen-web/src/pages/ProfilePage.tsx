@@ -35,15 +35,15 @@ const EMERGENCY_NUMBERS = [
 const FAQS = [
   {
     q: 'کد رهگیری چیست و چگونه کار می‌کند؟',
-    a: 'هر درخواستی که در تربت نو ثبت می‌شود، یک کد یکتای ۱۰ رقمی (مانند TM-XXXX-XXXX) دریافت می‌کند. با وارد کردن این کد در بخش «پیگیری» بدون نیاز به تماس تلفنی می‌توانید مرحله‌به‌مرحله رسیدگی به مشکل خود را مشاهده کنید.',
+    a: 'هر درخواستی که در تربتینو ثبت می‌شود، یک کد یکتای ۱۰ رقمی (مانند TM-XXXX-XXXX) دریافت می‌کند. با وارد کردن این کد در بخش «پیگیری» بدون نیاز به تماس تلفنی می‌توانید مرحله‌به‌مرحله رسیدگی به مشکل خود را مشاهده کنید.',
   },
   {
     q: 'مدت‌زمان رسیدگی به گزارش‌های شهربین چقدر است؟',
-    a: 'بر اساس تعهد استاندارد (SLA) تعریف‌شده در تربت نو، گزارش‌های ثبت‌شده ظرف حداکثر ۴ ساعت کاری توسط کارشناس مربوطه بررسی اولیه شده و وضعیت نهایی آنها معمولاً ظرف ۲۴ تا ۷۲ ساعت کاری مشخص می‌شود.',
+    a: 'بر اساس تعهد استاندارد (SLA) تعریف‌شده در تربتینو، گزارش‌های ثبت‌شده ظرف حداکثر ۴ ساعت کاری توسط کارشناس مربوطه بررسی اولیه شده و وضعیت نهایی آنها معمولاً ظرف ۲۴ تا ۷۲ ساعت کاری مشخص می‌شود.',
   },
   {
     q: 'آیا برای استفاده از خدمات نیازمند حضور در اداره هستم؟',
-    a: 'هدف تربت نو کاهش مراجعات حضوری است. تمامی خدمات با برچسب «فعال» یا «آزمایشی» کاملاً به‌صورت دیجیتال ثبت و مدارک دریافت می‌شوند. برای خدمات خاص که نیازمند امضای فیزیکی است، مدارک از قبل آماده و وقت مراجعه تعیین می‌شود.',
+    a: 'هدف تربتینو کاهش مراجعات حضوری است. تمامی خدمات با برچسب «فعال» یا «آزمایشی» کاملاً به‌صورت دیجیتال ثبت و مدارک دریافت می‌شوند. برای خدمات خاص که نیازمند امضای فیزیکی است، مدارک از قبل آماده و وقت مراجعه تعیین می‌شود.',
   },
   {
     q: 'اگر از پاسخ اداره رضایت نداشتم چه کنم؟',
@@ -218,7 +218,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         >
           <div className="flex items-center gap-3 text-slate-700">
             <Info size={18} className="text-purple-600" />
-            <span className="text-sm font-semibold">درباره سامانه «تربت نو»</span>
+            <span className="text-sm font-semibold">درباره سامانه «تربتینو»</span>
           </div>
           <ChevronLeft size={16} className="text-slate-400" />
         </button>
@@ -237,7 +237,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       {/* Footer Branding Note */}
       <div className="text-center pt-2">
         <p className="text-xs text-slate-400 font-medium">
-          تربت نو • شهر تو، همراه تو
+          تربتینو • شهر تو، همراه تو
         </p>
         <p className="text-[11px] text-slate-400 mt-0.5">
           توسعه توسط دیجیرال (شرکت نوادید شرق) با همکاری مدیریت شهری
@@ -340,7 +340,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       <Dialog
         isOpen={showFaqModal}
         onClose={() => setShowFaqModal(false)}
-        title="پرسش‌های متداول سامانه تربت نو"
+        title="پرسش‌های متداول سامانه تربتینو"
       >
         <div className="space-y-3 pt-2">
           {FAQS.map((faq, idx) => (
@@ -369,15 +369,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       <Dialog
         isOpen={showAboutModal}
         onClose={() => setShowAboutModal(false)}
-        title="درباره سامانه جامع تربت نو"
+        title="درباره سامانه جامع تربتینو"
       >
         <div className="space-y-4 pt-2 text-xs leading-relaxed text-slate-600">
           <div className="flex items-center justify-center py-2">
-            <img src="/brand/horizontal-logo-transparent.png" alt="تربت نو" className="h-12 object-contain" />
+            <img src="/brand/horizontal-logo-transparent.png" alt="تربتینو" className="h-12 object-contain" />
           </div>
 
           <p>
-            سامانه <strong>«تربت نو»</strong> با شعار <em>«شهر تو، همراه تو»</em> به عنوان پنجره واحد و درگاه هوشمند خدمات الکترونیک شهری، ارتباط شهروندان گرامی با مدیریت شهری و ادارات خدمات‌رسان شهرستان تربت حیدریه را تسهیل می‌نماید.
+            سامانه <strong>«تربتینو»</strong> با شعار <em>«شهر تو، همراه تو»</em> به عنوان پنجره واحد و درگاه هوشمند خدمات الکترونیک شهری، ارتباط شهروندان گرامی با مدیریت شهری و ادارات خدمات‌رسان شهرستان تربت حیدریه را تسهیل می‌نماید.
           </p>
 
           <div className="p-3 bg-purple-50 rounded-xl border border-purple-150 space-y-1.5">

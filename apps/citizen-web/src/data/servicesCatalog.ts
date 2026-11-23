@@ -461,7 +461,7 @@ export const SERVICES_CATALOG: ServiceCategory[] = [
         categoryTitle: 'هوشمندسازی',
         description: 'دستیار گفت‌وگومحور مبتنی بر هوش مصنوعی برای راهنمایی مراحل اداری، پاسخ به سوالات شهروندی و نگارش صحیح درخواست‌ها.',
         organization: 'AI',
-        organizationName: 'دستیار هوش مصنوعی تربت نو',
+        organizationName: 'دستیار هوش مصنوعی تربتینو',
         iconName: 'robot',
         status: 'active',
         statusLabel: 'فعال',

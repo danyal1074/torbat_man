@@ -200,7 +200,7 @@ function AdminContent() {
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 px-6 text-center text-xs text-slate-400">
-        سامانه جامع «تربت نو» • شهر تو، همراه تو • توسعه‌یافته توسط شرکت نوادید شرق (دیجیرال)
+        سامانه جامع «تربتینو» • شهر تو، همراه تو • توسعه‌یافته توسط شرکت نوادید شرق (دیجیرال)
       </footer>
 
       {/* Fast Demo Role Switcher Dialog */}

@@ -32,7 +32,7 @@ test('ظاهر کلاد، چیدمان راست‌به‌چپ و نمایش خد
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /به تربت‌نو خوش آمدید/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /به تربتینو خوش آمدید/ })).toBeVisible();
     await expect(page.locator('.hero-home .brand img')).toHaveJSProperty('complete', true);
     expect(await page.locator('html').getAttribute('dir')).toBe('rtl');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

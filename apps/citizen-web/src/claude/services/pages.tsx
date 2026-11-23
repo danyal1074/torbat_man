@@ -180,7 +180,7 @@ export function AnalyticsPage() {
 
 /* ================= Assistant (scripted) ================= */
 export function AssistantPage() {
-  const [msgs, setMsgs] = useState<{ from: 'bot' | 'me'; text: string; link?: [string, string] }[]>([{ from: 'bot', text: 'سلام! از من درباره خدمات تربت‌نو بپرسید؛ مثلاً «نانوایی کجاست؟».' }]);
+  const [msgs, setMsgs] = useState<{ from: 'bot' | 'me'; text: string; link?: [string, string] }[]>([{ from: 'bot', text: 'سلام! از من درباره خدمات تربتینو بپرسید؛ مثلاً «نانوایی کجاست؟».' }]);
   const [v, setV] = useState(''); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [msgs]);
   const send = async (text: string) => {

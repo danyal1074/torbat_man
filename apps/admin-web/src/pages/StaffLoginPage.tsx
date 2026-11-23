@@ -67,9 +67,9 @@ export const StaffLoginPage: React.FC = () => {
         {/* Brand Banner */}
         <div className="bg-[#592582] p-6 text-center text-white relative">
           <div className="flex justify-center mb-2">
-            <img src="/brand/horizontal-logo-transparent.png" alt="تربت نو" className="h-10 object-contain invert brightness-0" />
+            <img src="/brand/horizontal-logo-transparent.png" alt="تربتینو" className="h-10 object-contain invert brightness-0" />
           </div>
-          <h1 className="text-lg font-black tracking-tight">میز کار و کارتابل سازمانی تربت نو</h1>
+          <h1 className="text-lg font-black tracking-tight">میز کار و کارتابل سازمانی تربتینو</h1>
           <p className="text-xs text-purple-200 mt-1">
             سامانه مدیریت درخواست‌ها، ارجاع، رسیدگی و رضایت‌سنجی شهروندی
           </p>
@@ -236,7 +236,7 @@ export const StaffLoginPage: React.FC = () => {
 
         <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
           <p className="text-[11px] text-slate-500">
-            سامانه تربت نو • شهر تو، همراه تو • شرکت نوادید شرق (دیجیرال)
+            سامانه تربتینو • شهر تو، همراه تو • شرکت نوادید شرق (دیجیرال)
           </p>
         </div>
       </div>
