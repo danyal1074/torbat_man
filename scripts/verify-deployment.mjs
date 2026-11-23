@@ -16,6 +16,7 @@ const browser=await chromium.launch({channel:'chrome'});
 const citizen=await browser.newContext({...auth,viewport:{width:390,height:844}});
 const staff=await browser.newContext(auth);
 const errors=[];
+let stage='login';
 try{
  async function api(context,path,body,method='POST'){
   const response=await context.request.fetch(base+'/v1'+path,{method,data:body}).catch(error=>{
@@ -32,23 +33,36 @@ try{
   await api(context,prefix+'/auth/verify-otp',{mobile,code:otp.devCode});
  }
  const page=await citizen.newPage();page.on('pageerror',e=>errors.push(e.message));
+ if(accessPath){
+  const loginPage=await page.goto(base+'/login');
+  if(loginPage?.status()!==200)throw new Error('Demo sign-in page unavailable.');
+ }
  await login(citizen,'09120000001');await page.goto(base+'/');
+ stage='public home';
  await page.getByRole('heading',{name:'دسترسی سریع'}).waitFor();
+ stage='report form';
  await page.goto(base+'/shahrbin/new?type=roads');
  await page.getByLabel('توضیحات مشکل').fill('آزمون استقرار روی سرور؛ گزارش آزمایشی خرابی آسفالت برای تأیید گردش‌کار');
  await page.getByRole('button',{name:'مرحله بعد'}).click();
  await page.getByLabel('نشانی یا نشانه').fill('نشانی ساختگی مخصوص آزمون نصب سرور');
  await page.getByRole('button',{name:'مرحله بعد'}).click();
+ stage='report submission';
+ const submitted=page.waitForResponse(r=>new URL(r.url()).pathname==='/v1/requests'&&r.request().method()==='POST'&&(!accessPath||r.status()!==401));
  await page.getByRole('button',{name:'ثبت گزارش',exact:true}).click();
+ const submission=await submitted;
+ if(!submission.ok())throw new Error('Report submission HTTP '+submission.status());
+ stage='stored report';
  await page.getByText('گزارش شهری ثبت شد',{exact:true}).waitFor();
  await page.getByRole('link',{name:'مشاهده وضعیت گزارش'}).click();
  await page.getByRole('heading',{name:'روند رسیدگی'}).waitFor();
  const id=page.url().split('/').at(-1);
+ stage='staff workflow';
  await login(staff,'09130000001',true);
  await api(staff,'/admin/requests/'+id+'/assign',{assigneeId:(await api(staff,'/admin/me',undefined,'GET')).id},'PATCH');
  await api(staff,'/admin/requests/'+id+'/comments',{body:'پاسخ آزمایشی برای تأیید اتصال پنل و PostgreSQL مستقل',visibility:'public'});
  await api(staff,'/admin/requests/'+id+'/status',{status:'in_progress',reason:'شروع بررسی آزمایشی استقرار'},'PATCH');
  await api(staff,'/admin/requests/'+id+'/status',{status:'resolved',reason:'آزمون نصب کامل شد؛ این درخواست نمونه واقعی از گردش‌کار آزمایشی است.'},'PATCH');
+ stage='citizen result';
  await page.reload();await page.getByRole('heading',{name:'از نتیجه راضی بودید؟'}).waitFor();
  if(await page.locator('.detail-top .sbadge').innerText()!=='انجام‌شده')throw new Error('Resolved status missing.');
  const notifications=await api(citizen,'/notifications',undefined,'GET');
@@ -64,6 +78,6 @@ try{
  await writeFile('.release/verification/server-smoke.json',JSON.stringify(result,null,2));
  console.log(JSON.stringify(result));
 }catch(error){
- console.error('Deployment smoke failed:', error.message.split('\n',1)[0]);
+ console.error('Deployment smoke failed at '+stage+':', error.message.split('\n',1)[0]);
  process.exitCode=1;
 }finally{await browser.close();}
