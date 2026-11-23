@@ -35,6 +35,8 @@ export function requestsRoutes(app: FastifyInstance) {
                 .select({
                 req: requests,
                 serviceTitle: services.title,
+                serviceSlug: services.slug,
+                workflow: services.workflow,
                 orgName: organizations.name,
             })
                 .from(requests)
@@ -44,11 +46,14 @@ export function requestsRoutes(app: FastifyInstance) {
                 .orderBy(...newestFirst(requests.createdAt,requests.id))
                 .limit(query.limit+1);
             const page=rows.slice(0,query.limit);
-            const data = page.map(({ req: r, serviceTitle, orgName }) => ({
+            const data = page.map(({ req: r, serviceTitle, serviceSlug, workflow, orgName }) => ({
                 id: r.id,
                 trackingCode: r.trackingCode,
                 title: r.title,
-                serviceSlug: '',
+                serviceSlug,
+                workflow,
+                lat: r.lat ?? undefined,
+                lng: r.lng ?? undefined,
                 serviceTitle,
                 organizationName: orgName,
                 status: r.status,
@@ -77,6 +82,7 @@ export function requestsRoutes(app: FastifyInstance) {
                 req: requests,
                 serviceTitle: services.title,
                 serviceSlug: services.slug,
+                workflow: services.workflow,
                 orgName: organizations.name,
             })
                 .from(requests)
@@ -114,6 +120,7 @@ export function requestsRoutes(app: FastifyInstance) {
                     trackingCode: row.req.trackingCode,
                     title: row.req.title,
                     serviceSlug: row.serviceSlug,
+                    workflow: row.workflow,
                     serviceTitle: row.serviceTitle,
                     organizationName: row.orgName,
                     status: row.req.status,
