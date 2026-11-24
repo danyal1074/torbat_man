@@ -39,7 +39,7 @@ try{
  }
  await login(citizen,'09120000001');await page.goto(base+'/');
  stage='public home';
- await page.getByRole('heading',{name:'دسترسی سریع'}).waitFor();
+ await page.getByRole('heading',{name:'دسته‌بندی خدمات'}).waitFor();
  stage='report form';
  await page.goto(base+'/shahrbin/new?type=roads');
  await page.getByLabel('توضیحات مشکل').fill('آزمون استقرار روی سرور؛ گزارش آزمایشی خرابی آسفالت برای تأیید گردش‌کار');
@@ -72,7 +72,7 @@ try{
  if(errors.length)throw new Error('Browser errors: '+errors.join('; '));
  await mkdir('.release/verification',{recursive:true});
  await page.screenshot({path:'.release/verification/server-request-mobile.png',fullPage:true});
- await page.goto(base+'/');await page.locator('.home-content .card').first().waitFor();
+ await page.goto(base+'/');await page.locator('.ref-home-grid a').first().waitFor();
  await page.screenshot({path:'.release/verification/server-home-mobile.png',fullPage:true});
  const result={checkedAt:new Date().toISOString(),database:'isolated-postgresql-16',catalogCount:list.data.length,checks:['built-ui','cookie-login','request-create','staff-assignment','staff-reply','status-history','citizen-result','notification'],browserErrors:errors.length,status:'passed'};
  await writeFile('.release/verification/server-smoke.json',JSON.stringify(result,null,2));

@@ -31,6 +31,7 @@ export type CaseKind = 'report' | 'office' | 'order' | 'apply';
 export const kindLabel: Record<CaseKind, string> = { report: 'گزارش شهری', office: 'درخواست اداری', order: 'سفارش', apply: 'درخواست شغلی' };
 export interface Message { from: 'org' | 'user'; text: string; at: number }
 export interface Report {
+  thumbnailUrl?: string;
   id: string; code: string; kind: CaseKind; title: string; typeId: string; description: string; point: GeoPoint | null; landmark: string;
   photoNames: string[]; status: ReportStatus; createdAt: number; demo: true; orgName: string;
   attachments: { id: string; url: string }[]; history: { id: string; toStatus: string; createdAt: string; reason?: string }[]; rawStatus: string;
@@ -78,7 +79,7 @@ const statuses: Record<string, ReportStatus> = {
   submitted: 'submitted', triaged: 'review', assigned: 'review', in_progress: 'progress',
   waiting_for_citizen: 'review', reopened: 'review', resolved: 'done', closed: 'done', rejected: 'rejected',
 };
-type ServerReport = RecordRow & { serviceSlug?: string; workflow?: string; lat?: number; lng?: number };
+type ServerReport = RecordRow & { serviceSlug?: string; workflow?: string; lat?: number; lng?: number; thumbnailUrl?: string };
 type RequestPage = { data: ServerReport[]; meta: { nextCursor: string | null } };
 
 function asReport(row: ServerReport): Report {
@@ -89,7 +90,7 @@ function asReport(row: ServerReport): Report {
     id: row.id, code: row.trackingCode, kind, title: row.title, typeId, description: row.description, point,
     landmark: row.address ?? '', photoNames: [], status: statuses[row.status] ?? 'submitted', rawStatus: row.status,
     createdAt: Date.parse(row.createdAt), demo: true, orgName: row.organizationName, owner: DEMO_USER,
-    attachments: row.attachments ?? [], history: row.history ?? [],
+    attachments: row.attachments ?? [], history: row.history ?? [], thumbnailUrl: row.thumbnailUrl,
     messages: (row.comments ?? []).slice().reverse().map(comment => ({
       from: comment.isStaff ? 'org' : 'user', text: comment.body, at: Date.parse(comment.createdAt),
     })),

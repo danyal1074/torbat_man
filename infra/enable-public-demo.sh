@@ -125,7 +125,7 @@ server {
     proxy_buffering off;
 
     # Public browsing is open. Demo OTP and any new private routes retain the entry gate.
-    location ~ "^/(?:|index\.html|services(?:/[^/]+)?(?:/[^/]+)?|categories/[^/]+|catalog(?:/[^/]+)?|welcome|search|city-map|city-news|shahrbin(?:/(?:map|guide|new))?|assistant|support|health|app-icon\.svg|logo-mark\.png|brand/[a-z-]+\.png|manifest\.webmanifest|registerSW\.js|sw\.js|workbox-[a-z0-9]+\.js|v1/(?:services(?:/[^/]+)?|announcements|ai/assistant))$" {
+    location ~ "^/(?:|index\.html|services(?:/[^/]+)?(?:/[^/]+)?|categories/[^/]+|catalog(?:/[^/]+)?|welcome|more|terms|search|city-map|city-news|shahrbin(?:/(?:map|guide|new))?|assistant|support|health|app-icon\.svg|logo-mark\.png|torbatino-(?:mark|skyline)\.svg|brand/[a-z-]+\.png|manifest\.webmanifest|registerSW\.js|sw\.js|workbox-[a-z0-9]+\.js|v1/(?:services(?:/[^/]+)?|announcements|ai/assistant))$" {
         auth_basic off;
         proxy_pass http://127.0.0.1:4180;
     }

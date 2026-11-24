@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
-import { Bell, ChevronLeft, ClipboardList, Heart, HelpCircle, LogOut, Megaphone, Search, Settings, ShieldCheck, UserPen, UserRound, Sparkles, LayoutDashboard } from 'lucide-react';
-import { Brand, EmptyState, PageHeader, SearchField, ServiceCard } from '../components/ui';
+import { Bell, CalendarDays, CheckCircle2, ChevronLeft, ClipboardList, Ellipsis, Heart, Info, LogOut, Settings, UserPen, UserRound, Users, LayoutDashboard } from 'lucide-react';
+import { EmptyState, PageHeader, SearchField, ServiceCard } from '../components/ui';
 import { allServices } from '../data/services';
 import { matchesQuery, normalizeFa } from '../lib/normalize';
 import { OTP_LEN, Prefs, applyPrefs, loadPrefs, maskPhone, normalizePhone, session, useFavorites, useUser } from '../state/session';
@@ -12,36 +12,6 @@ import { api, json, messageOf } from '../lib/backend';
 import { Dialog, MenuItem, Toggle, Unauthorized } from './parts';
 
 const DemoNote = ({ text }: { text: string }) => <p className="demo-note" role="note">{text}</p>;
-const QUICK = ['shahrbin', 'bread', 'bus', 'health', 'bazaar', 'tourism', 'saffron', 'assistant'];
-
-/* ---------------- Home ---------------- */
-export function HomePage() {
-  const user = useUser(); const navigate = useNavigate(); const [q, setQ] = useState(''); const unread = (useNotices().data ?? []).filter((i) => !i.read).length;
-  const quick = QUICK.map((id) => allServices.find((s) => s.id === id)!).filter(Boolean);
-  const submit = (e: FormEvent) => { e.preventDefault(); navigate(`/search${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`); };
-  return (
-    <main className="page-enter">
-      <header className="hero hero-home">
-        <div className="hero-inner"><Brand /><span /><Link to="/notifications" className="icon-btn bell" aria-label={unread ? `اعلان‌ها (${faDigits(unread)} خوانده‌نشده)` : 'اعلان‌ها'}><Bell size={22} aria-hidden="true" />{unread > 0 && <span className="badge-dot" aria-hidden="true">{faDigits(unread)}</span>}</Link></div>
-        <div className="hero-greet"><h1>{user?.name ? `سلام ${user.name}` : 'سلام، به تربتینو خوش آمدید'}</h1><p>شهر تو، همراه تو</p></div>
-      </header>
-      <div className="search-wrap"><form className="search" role="search" onSubmit={submit}>
-        <Search size={22} aria-hidden="true" /><label htmlFor="home-q" className="sr-only">جست‌وجوی خدمت</label>
-        <input id="home-q" type="search" enterKeyHint="search" placeholder="جست‌وجوی خدمت، سازمان یا موضوع..." value={q} onChange={(e) => setQ(e.target.value)} />
-      </form></div>
-      <div className="content home-content">
-        <Link to="/services/shahrbin" className="feature">
-          <span className="feature-ico"><Megaphone size={30} aria-hidden="true" /></span>
-          <span className="rtxt"><strong>شهربین</strong><small>مشکل شهری را گزارش دهید و پیگیری کنید</small></span><ChevronLeft size={22} aria-hidden="true" />
-        </Link>
-        <section aria-labelledby="quick"><div className="panel-head"><h2 id="quick" className="sec-title">دسترسی سریع</h2><Link to="/services" className="see-all" style={{ marginInlineStart: 'auto' }}>همه خدمات <ChevronLeft size={16} aria-hidden="true" /></Link></div>
-          <div className="grid">{quick.map((s) => <ServiceCard key={s.id} service={s} />)}</div></section>
-        {!user && <section className="panel lilac login-nudge"><strong>با ورود، گزارش‌ها و علاقه‌مندی‌هایتان را داشته باشید</strong><Link className="btn" to="/login">ورود با شماره موبایل</Link></section>}
-      </div>
-    </main>
-  );
-}
-
 /* ---------------- Global search ---------------- */
 export function SearchPage() {
   const [sp, setSp] = useSearchParams(); const [q, setQ] = useState(sp.get('q') ?? '');
@@ -64,6 +34,8 @@ export function SearchPage() {
 export function NotificationsPage() {
   const query = useNotices(); const mark = useMarkNotice();
   const user = useUser(); const items = query.data ?? []; const navigate = useNavigate();
+  const [filter, setFilter] = useState<'all' | 'request'>('all');
+  const shown = filter === 'request' ? items.filter(item => item.link) : items;
   const unread = items.filter(i => !i.read); const [error, setError] = useState('');
   const markAndGo = async (ids: string[], link?: string) => {
     setError('');
@@ -71,13 +43,19 @@ export function NotificationsPage() {
     catch (error) { setError(messageOf(error)); }
   };
   return (
-    <main className="page-enter"><PageHeader title="اعلان‌ها" subtitle="پیام‌ها و وضعیت درخواست‌ها" />
+    <main className="page-enter ref-notices"><PageHeader title="اعلان‌ها" subtitle="" />
       <div className="sheet">
-        {!user ? <Unauthorized /> : query.isPending ? <p role="status">در حال دریافت اعلان‌ها…</p> : query.isError ? <p className="field-err" role="alert">{messageOf(query.error)}</p> : items.length === 0 ? <EmptyState title="اعلانی ندارید" text="وقتی وضعیت درخواست‌هایتان تغییر کند، اینجا خبر می‌گیرید." /> : (<>
+        <div className="chips ref-filter-row" aria-label="نوع اعلان">
+          <button type="button" aria-pressed={filter === 'all'} className={'chip' + (filter === 'all' ? ' on' : '')} onClick={() => setFilter('all')}>همه</button>
+          <Link to="/city-news" className="chip">اطلاع‌رسانی</Link>
+          <button type="button" aria-pressed={filter === 'request'} className={'chip' + (filter === 'request' ? ' on' : '')} onClick={() => setFilter('request')}>درخواست‌ها</button>
+          <Link to="/catalog/city-events" className="chip"><CalendarDays size={14}/>رویدادها</Link>
+        </div>
+        {!user ? <Unauthorized /> : query.isPending ? <p role="status">در حال دریافت اعلان‌ها…</p> : query.isError ? <p className="field-err" role="alert">{messageOf(query.error)}</p> : shown.length === 0 ? <EmptyState title="اعلانی ندارید" text="وقتی وضعیت درخواست‌هایتان تغییر کند، اینجا خبر می‌گیرید." /> : (<>
           <button className="linkbtn" disabled={!unread.length} onClick={() => void markAndGo(unread.map(item => item.id))}>علامت‌گذاری همه به‌عنوان خوانده‌شده</button>
-          <ul className="rlist">{items.map((n) => (
+          <ul className="rlist">{shown.map((n) => (
             <li key={n.id}><button type="button" className={`rrow notice${n.read ? '' : ' unread'}`} onClick={() => void markAndGo(n.read ? [] : [n.id], n.link)}>
-              <span className="rtxt"><strong>{n.title}</strong><small>{n.body}</small><small>{relTime(n.at)}</small></span>{!n.read && <span className="sr-only">خوانده‌نشده</span>}</button></li>))}</ul>
+              <span className="rico ref-notice-icon">{n.read ? <CheckCircle2 size={22}/> : n.link ? <Bell size={22}/> : <Info size={22}/>}</span><span className="rtxt"><strong>{n.title}</strong><small>{n.body}</small><small>{relTime(n.at)}</small></span><ChevronLeft size={18}/>{!n.read && <span className="sr-only">خوانده‌نشده</span>}</button></li>))}</ul>
         </>)}
         {error && <p className="field-err" role="alert">{error}</p>}
       </div></main>
@@ -180,24 +158,23 @@ export function ProfileSetupPage() {
 export function AccountPage() {
   const user = useUser(); const navigate = useNavigate(); const [ask, setAsk] = useState(false); const [logoutError, setLogoutError] = useState('');
   return (
-    <main className="page-enter"><PageHeader title="حساب من" subtitle="پروفایل و تنظیمات" />
+    <main className="page-enter ref-profile"><PageHeader title="پروفایل" subtitle="" />
       <div className="sheet">
         {!user ? <Unauthorized /> : (<>
-          <div className="profile-card"><span className="avatar"><UserRound size={34} aria-hidden="true" /></span>
-            <div className="rtxt"><strong>{user.name || 'کاربر تربتینو'}</strong><small dir="ltr" style={{ textAlign: 'right' }}>{user.phone}</small></div></div>
+          <div className="profile-card"><span className="avatar"><UserRound size={41} aria-hidden="true" /><Link className="ref-avatar-edit" to="/account/edit" aria-label="ویرایش اطلاعات"><UserPen size={14}/></Link></span>
+            <div className="rtxt"><strong>{user.name || 'کاربر تربتینو'}</strong><small dir="ltr" >{faDigits(user.phone)}</small></div></div>
           <nav className="menu" aria-label="حساب کاربری">
-            <MenuItem to="/account/edit" icon={UserPen} title="ویرایش اطلاعات" />
+            <MenuItem to="/account/edit" icon={UserPen} title="اطلاعات کاربری" />
+            <MenuItem to="/services/my-family" icon={Users} title="خانواده من" />
             <MenuItem to="/requests" icon={ClipboardList} title="درخواست‌های من" />
             <MenuItem to="/account/favorites" icon={Heart} title="علاقه‌مندی‌ها" />
             <MenuItem to="/notifications" icon={Bell} title="اعلان‌ها" />
           </nav>
         </>)}
         <nav className="menu" aria-label="تنظیمات و راهنما">
-          <MenuItem to="/account/settings" icon={Settings} title="تنظیمات" hint="اندازه متن و حرکت" />
-          <MenuItem to="/account/privacy" icon={ShieldCheck} title="حریم خصوصی" />
-          <MenuItem to="/account/support" icon={HelpCircle} title="پشتیبانی و راهنما" />
-          <MenuItem to="/welcome" icon={Sparkles} title="معرفی تربتینو" />
-          <MenuItem to="/admin" icon={LayoutDashboard} title="پنل مدیریت" hint="نمای مدیر و کارشناس سازمان" />
+          <MenuItem to="/account/settings" icon={Settings} title="تنظیمات و امنیت" />
+          <MenuItem to="/more" icon={Ellipsis} title="بیشتر" />
+          <MenuItem to="/admin" icon={LayoutDashboard} title="پنل مدیریت" />
         </nav>
         {user && <button type="button" className="btn-ghost danger-btn" onClick={() => setAsk(true)}><LogOut size={18} aria-hidden="true" />خروج از حساب</button>}
         <Dialog open={ask} title="از حساب خارج می‌شوید؟" onClose={() => setAsk(false)}>
@@ -302,7 +279,7 @@ export function WelcomePage() {
   ];
   return (
     <main className="welcome page-enter">
-      <img src="/logo-mark.png" alt="تربتینو" width={120} height={120} />
+      <img src="/torbatino-mark.svg" alt="تربتینو" width={120} height={120} />
       <h1>{slides[i].t}</h1><p>{slides[i].d}</p>
       <div className="dots" role="tablist" aria-label="اسلایدها">{slides.map((_, k) => <button key={k} role="tab" aria-selected={k === i} aria-label={`اسلاید ${faDigits(k + 1)}`} className={k === i ? 'on' : ''} onClick={() => setI(k)} />)}</div>
       <div className="stack full">

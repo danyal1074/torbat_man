@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { ArrowLeft, ArrowRight, BookOpen, Camera, CheckCircle2, ChevronLeft, ClipboardList, Copy, FileSearch, Info, Map as MapIcon, Megaphone, Plus, Save, Send, Star, Trash2, X } from 'lucide-react';
-import { Brand, EmptyState, PageHeader } from '../components/ui';
+import { ArrowLeft, ArrowRight, BookOpen, Bus, Camera, Crosshair, HeartPlus, Layers3, MapPinned, Search, Wheat, Wrench, CheckCircle2, ChevronLeft, ClipboardList, Copy, FileSearch, Info, Plus, Save, Send, Star, Trash2, X } from 'lucide-react';
+import { EmptyState, PageHeader } from '../components/ui';
 import {
   Draft, DraftErrors, MAX_DESC, MAX_PHOTOS, Report, emptyDraft, faDigits, formatDate, problemTypes, reportStore,
   statusMeta, typeOf, useReports, useReport, useReportCollection, validateInfo, validateLocation, validatePhoto, ReportStatus, DEMO_USER, kindLabel, draftStore, useDrafts, relTime,
@@ -9,6 +9,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useUser } from '../state/session';
 import { messageOf } from '../lib/backend';
+import { normalizeFa } from '../lib/normalize';
+import { ReferenceIcon } from '../components/ReferenceIcon';
 import { statusLabels } from '../../lib';
 import { Field, MapPicker, Stepper, StatusBadge, TypeTile } from './parts';
 
@@ -17,50 +19,35 @@ const DemoNote = () => (
 );
 
 /* ---------------- Home ---------------- */
+const issueGlyphs: Record<string, string> = { lighting: 'lighting', roads: 'roads', waste: 'waste', green: 'green-space' };
+const featuredIssues = [
+  ['lighting', 'خرابی روشنایی معابر'],
+  ['roads', 'آسیب‌دیدگی آسفالت'],
+  ['waste', 'جمع‌آوری زباله'],
+  ['green', 'مشکلات فضای سبز'],
+  ['other', 'سایر مشکلات شهری'],
+] as const;
+
 export function ShahrbinHome() {
-  const navigate = useNavigate();
-  const reports = useReports();
-  const [type, setType] = useState<string | null>(null);
-  const [point] = useState<null>(null);
-  return (
-    <main className="page-enter">
-      <header className="hero hero-shahrbin">
-        <div className="hero-inner">
-          <Brand />
-          <span />
-          <button type="button" className="icon-btn" aria-label="بازگشت" onClick={() => navigate('/services')}><ArrowRight size={22} aria-hidden="true" /></button>
-        </div>
-        <div className="hero-sb">
-          <span className="hero-sb-icon"><Megaphone size={30} aria-hidden="true" /></span>
-          <div><h1>شهربین</h1><p>گزارش مشکلات شهری و پیگیری رسیدگی</p></div>
-        </div>
-      </header>
-      <div className="content sb-content">
-        <section className="panel map-card" aria-label="موقعیت گزارش">
-          <MapPicker point={point} readOnly label="نقشه تربت حیدریه" />
-          <div className="map-bar"><span>موقعیت گزارش را در مرحله دوم ثبت، روی نقشه مشخص می‌کنید</span></div>
-        </section>
-        <section aria-labelledby="pick-type">
-          <h2 id="pick-type" className="sec-title">نوع مشکل را انتخاب کنید</h2>
-          <div className="tiles">{problemTypes.map((t) => <TypeTile key={t.id} type={t} selected={type === t.id} onSelect={() => setType(type === t.id ? null : t.id)} />)}</div>
-        </section>
-        <button type="button" className="cta" onClick={() => navigate(`/shahrbin/new${type ? `?type=${type}` : ''}`)}>
-          ثبت گزارش شهری <span className="cta-plus"><Plus size={22} aria-hidden="true" /></span>
-        </button>
-        <Link to="/requests" className="track-card">
-          <span className="track-ico"><ClipboardList size={28} aria-hidden="true" /></span>
-          <span className="track-txt"><strong>پیگیری گزارش‌های من</strong><small>{reports.length ? `${faDigits(reports.length)} گزارش در حساب شما` : 'مشاهده وضعیت و پاسخ گزارش‌های قبلی'}</small></span>
-          <ChevronLeft size={22} aria-hidden="true" />
-        </Link>
-        <div className="shortcuts">
-          <Link to="/shahrbin/map"><MapIcon size={22} aria-hidden="true" />نقشه گزارش‌ها</Link>
-          <Link to="/shahrbin/guide"><BookOpen size={22} aria-hidden="true" />راهنما</Link>
-          <Link to="/requests?tab=drafts"><Save size={22} aria-hidden="true" />پیش‌نویس‌ها</Link>
-        </div>
-        <DemoNote />
+  return <main className="page-enter ref-report-intro">
+    <PageHeader title="گزارش مشکل شهری" subtitle=""/>
+    <div className="sheet">
+      <div className="ref-report-lead">
+        <span className="ref-round ref-tone-purple"><Wrench size={37} strokeWidth={1.55}/></span>
+        <h2>گزارش مشکل شهری</h2>
+        <p>مشکلات شهری مانند خرابی روشنایی، آسفالت و جمع‌آوری زباله را گزارش کنید.</p>
       </div>
-    </main>
-  );
+      <h3>موارد قابل گزارش</h3>
+      <ul className="rlist ref-report-topics">
+        {featuredIssues.map(([id, label]) => <li key={id}><Link className="rrow" to={'/shahrbin/new?type=' + id}>
+          <ReferenceIcon name={issueGlyphs[id] ?? id} fallback={typeOf(id).icon} size={23}/>
+          <strong>{label}</strong><ChevronLeft size={18}/>
+        </Link></li>)}
+      </ul>
+      <Link to="/shahrbin/new" className="btn-main ref-report-cta">ثبت گزارش جدید</Link>
+      <Link className="ref-more-link" to="/shahrbin/guide"><BookOpen size={16}/>راهنمای ثبت و پیگیری</Link>
+    </div>
+  </main>;
 }
 
 /* ---------------- New report wizard ---------------- */
@@ -246,7 +233,7 @@ export function SuccessPage() {
 
 /* ---------------- My requests ---------------- */
 const FILTERS: { id: 'all' | ReportStatus; label: string }[] = [
-  { id: 'all', label: 'همه' }, { id: 'submitted', label: 'ثبت‌شده' }, { id: 'progress', label: 'در حال رسیدگی' }, { id: 'done', label: 'انجام‌شده' }, { id: 'rejected', label: 'ردشده' },
+  { id: 'all', label: 'همه' }, { id: 'progress', label: 'در حال رسیدگی' }, { id: 'done', label: 'پایان‌یافته' },
 ];
 export function MyReportsPage() {
   const collection = useReportCollection(); const user = useUser();
@@ -254,12 +241,12 @@ export function MyReportsPage() {
   const tab = sp.get('tab') === 'drafts' ? 'drafts' : 'cases';
   const [f, setF] = useState<'all' | ReportStatus>('all');
   const reports = all.filter((r) => r.owner === DEMO_USER);
-  const list = reports.filter((r) => f === 'all' || r.status === f || (f === 'progress' && r.status === 'review'));
+  const list = reports.filter(r => f === 'all' || (f === 'done' ? ['done','rejected'].includes(r.status) : !['done','rejected'].includes(r.status)));
   return (
-    <main className="page-enter">
-      <PageHeader title="درخواست‌ها" subtitle="پیگیری گزارش‌ها و درخواست‌های من" />
+    <main className="page-enter ref-requests">
+      <PageHeader title="درخواست‌های من" subtitle="" />
       <div className="sheet">
-        <div className="seg" role="group" aria-label="بخش">
+        <div className="seg ref-request-seg" role="group" aria-label="بخش">
           <button aria-pressed={tab === 'cases'} onClick={() => setSp({})}>درخواست‌ها ({faDigits(reports.length)})</button>
           <button aria-pressed={tab === 'drafts'} onClick={() => setSp({ tab: 'drafts' })}>پیش‌نویس‌ها ({faDigits(drafts.length)})</button>
         </div>
@@ -269,7 +256,7 @@ export function MyReportsPage() {
               <li key={d.id} className="rrow"><Link to={`/shahrbin/new?draft=${d.id}`} className="rtxt"><strong>{d.typeId ? typeOf(d.typeId).title : 'بدون نوع'}</strong><small>{d.description || 'بدون توضیح'}</small><small>{relTime(d.updatedAt)}</small></Link>
                 <button className="linkish" aria-label="حذف پیش‌نویس" onClick={() => draftStore.remove(d.id)}><Trash2 size={18} aria-hidden="true" /></button></li>))}</ul>
         ) : (<>
-          <div className="chips" role="tablist" aria-label="فیلتر وضعیت">
+          <div className="chips ref-filter-row" role="tablist" aria-label="فیلتر وضعیت">
             {FILTERS.map((x) => <button key={x.id} role="tab" aria-selected={f === x.id} className={`chip${f === x.id ? ' on' : ''}`} onClick={() => setF(x.id)}>{x.label}</button>)}
           </div>
           {!user ? <Link className="btn" to="/login?next=%2Frequests">ورود برای مشاهده درخواست‌ها</Link> : collection.isPending ? <p role="status">در حال دریافت درخواست‌ها…</p> : collection.isError ? <p className="field-err" role="alert">{messageOf(collection.error)}</p> : list.length === 0 ? (
@@ -285,13 +272,16 @@ export function MyReportsPage() {
 }
 function ReportRow({ r }: { r: Report }) {
   const Icon = r.kind === 'report' ? typeOf(r.typeId).icon : ClipboardList;
-  return (
-    <li><Link to={`/shahrbin/reports/${r.id}`} className="rrow">
-      <span className="rico"><Icon size={26} aria-hidden="true" /></span>
-      <span className="rtxt"><strong>{r.title}</strong><small>{kindLabel[r.kind]} · <bdi dir="ltr">{r.code}</bdi></small><small>{relTime(r.createdAt)}{r.needsDocs ? ' · نیاز به مدرک' : ''}</small></span>
-      <StatusBadge status={r.status} /><ChevronLeft size={18} aria-hidden="true" />
-    </Link></li>
-  );
+  return <li><Link to={'/shahrbin/reports/' + r.id} className="rrow ref-request-card">
+    <span className="rtxt"><strong>{r.title}</strong><small>کد: <bdi dir="ltr">{r.code}</bdi></small>
+      <small>{new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(r.createdAt)}</small></span>
+    <span className="ref-case-preview">
+      {r.thumbnailUrl ? <img className="ref-case-thumb" src={r.thumbnailUrl} alt="" loading="lazy" width="88" height="60"/>
+        : <span className="ref-case-thumb ref-case-thumb-placeholder"><ReferenceIcon name={issueGlyphs[r.typeId] ?? r.typeId} fallback={Icon} size={31}/></span>}
+      <StatusBadge status={r.status}/>
+    </span>
+    <ChevronLeft size={19} aria-hidden="true"/>
+  </Link></li>;
 }
 
 /* ---------------- Detail ---------------- */
@@ -372,22 +362,52 @@ export function ReportDetailPage() {
 }
 
 /* ---------------- Map of reports ---------------- */
+const cityMapLinks = [
+  { id: 'health', label: 'مراکز درمانی', path: '/services/health', icon: HeartPlus },
+  { id: 'pharmacy', label: 'داروخانه', path: '/services/health', icon: HeartPlus },
+  { id: 'bread', label: 'نانوایی', path: '/services/bread', icon: Wheat },
+  { id: 'bus', label: 'اتوبوس', path: '/services/bus', icon: Bus },
+] as const;
+
 export function ReportsMapPage() {
-  const all = useReports().filter((r) => r.kind === 'report' && r.point); const [sel, setSel] = useState<string | null>(null);
-  const cur = all.find((r) => r.code === sel);
-  return (
-    <main className="page-enter"><PageHeader title="نقشه گزارش‌ها" subtitle="موقعیت گزارش‌های حساب شما" />
-      <div className="sheet">
-        <MapPins reports={all} onSel={setSel} />
-        {cur ? <Link className="rrow" to={`/shahrbin/reports/${cur.id}`}><span className="rtxt"><strong>{cur.title}</strong><small>{cur.description}</small></span><StatusBadge status={cur.status} /></Link> : <p className="field-hint">برای دیدن جزئیات گزارش، روی نشان مربوط به آن بزنید.</p>}
-        <DemoNote />
+  const reports = useReports();
+  const [selected, setSelected] = useState('');
+  const [search, setSearch] = useState('');
+  const [showReports, setShowReports] = useState(true);
+  const [point, setPoint] = useState<Report['point']>(null);
+  const [message, setMessage] = useState('');
+  const needle = normalizeFa(search);
+  const markers = reports.filter(report => report.point && (!needle || normalizeFa(report.title + ' ' + report.landmark).includes(needle)));
+  const current = markers.find(item => item.id === selected);
+  const links = cityMapLinks.filter(item => !needle || normalizeFa(item.label).includes(needle));
+  const locate = () => {
+    setMessage('');
+    if (!navigator.geolocation) { setMessage('موقعیت‌یابی روی این دستگاه در دسترس نیست.'); return; }
+    navigator.geolocation.getCurrentPosition(position => {
+      setPoint({ lat: position.coords.latitude, lon: position.coords.longitude });
+    }, () => setMessage('دسترسی به موقعیت داده نشد.'), { timeout: 10000 });
+  };
+  return <main className="page-enter ref-map">
+    <PageHeader title="نقشه شهر" subtitle=""/>
+    <div className="sheet">
+      <label className="ref-map-search"><Search size={22}/><span className="sr-only">جست‌وجوی مکان یا خدمت</span>
+        <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="جست‌وجوی مکان یا خدمت…"/></label>
+      <div className="ref-map-card">
+        <MapPicker point={point} readOnly label="نقشه تربت حیدریه" onSelect={setSelected}
+          markers={showReports ? markers.flatMap(report => report.point ? [{ id: report.id, point: report.point, title: report.title }] : []) : []}/>
+        <button type="button" className="ref-map-control ref-map-layers" aria-label="نمایش گزارش‌های من" aria-pressed={showReports} onClick={() => setShowReports(value => !value)}><Layers3 size={22}/></button>
+        <button type="button" className="ref-map-control ref-map-locate" aria-label="موقعیت فعلی من" onClick={locate}><Crosshair size={22}/></button>
       </div>
-    </main>
-  );
-}
-export function MapPins({ reports, onSel }: { reports: Report[]; onSel: (id: string) => void }) {
-  return <MapPicker point={null} readOnly label="نقشه گزارش‌های من" onSelect={onSel}
-    markers={reports.flatMap(report => report.point ? [{ id: report.code, point: report.point, title: report.title }] : [])}/>;
+      <div className="ref-shortcut-grid">{links.map(item => <Link key={item.id} to={item.path}>
+        <ReferenceIcon name={item.id} fallback={item.icon} size={24}/><strong>{item.label}</strong>
+      </Link>)}</div>
+      {message && <p className="field-hint" role="status">{message}</p>}
+      {needle && !links.length && !markers.length && <p className="field-hint">موردی پیدا نشد.</p>}
+      {current && showReports && <Link className="rrow" to={'/shahrbin/reports/' + current.id}>
+        <MapPinned size={22}/><span className="rtxt"><strong>{current.title}</strong><small>{current.landmark}</small></span><StatusBadge status={current.status}/>
+      </Link>}
+    </div>
+  </main>;
 }
 
 /* ---------------- Guide ---------------- */

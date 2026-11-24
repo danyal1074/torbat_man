@@ -1,28 +1,29 @@
 import { ReactNode } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router';
-import { ArrowRight, ChevronLeft, Home, LayoutGrid, Megaphone, ClipboardList, User, Search, X, SearchX } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { Bell, ChevronLeft, Home, LayoutGrid, ClipboardList, User, Search, X, SearchX } from 'lucide-react';
 import type { Category, Service } from '../data/services';
-import { useDisabledServices } from '../state/notifications';
+import { useDisabledServices, useNotices } from '../state/notifications';
+import { ReferenceIcon } from './ReferenceIcon';
 
 export function Brand() {
   return (
-    <Link to="/services" className="brand" aria-label="تربتینو؛ شهر تو، همراه تو">
-      <img src="/logo-mark.png" alt="" width={44} height={44} />
+    <Link to="/" className="brand ref-brand" aria-label="تربتینو؛ خانه">
+      <img src="/torbatino-mark.svg" alt="" width={47} height={47} />
       <span className="brand-text"><span className="brand-name">تربتینو</span><span className="brand-en" aria-hidden="true">TORBATINO</span></span>
     </Link>
   );
 }
 
-export function PageHeader({ title, subtitle, children }: { title: string; subtitle: string; children?: ReactNode }) {
+export function PageHeader({ title, subtitle, children, tone = 'plain' }: { title: string; subtitle: string; children?: ReactNode; tone?: 'plain' | 'purple' }) {
   const navigate = useNavigate();
   return (
     <>
-      <header className="hero">
+      <header className={`hero ref-page-header ref-header-${tone}`}>
         <div className="hero-inner">
-          <Brand />
+          {tone === 'purple' ? <Brand/> : <span/>}
           <div className="hero-title"><h1>{title}</h1><p>{subtitle}</p></div>
-          <button type="button" className="icon-btn" aria-label="بازگشت" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/services'))}>
-            <ArrowRight size={22} aria-hidden="true" />
+          <button type="button" className="icon-btn" aria-label="بازگشت" onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'))}>
+            <ChevronLeft size={22} aria-hidden="true" />
           </button>
         </div>
       </header>
@@ -53,7 +54,7 @@ export function ServiceCard({ service }: { service: Service }) {
   return (
     <Link to={service.path} className="card" aria-label={soon ? `${service.title} (${off ? 'غیرفعال' : 'به‌زودی'})` : service.title}>
       {soon && <span className="soon-dot" aria-hidden="true">{off ? 'غیرفعال' : 'به‌زودی'}</span>}
-      <Icon className="ico" size={30} strokeWidth={1.7} aria-hidden="true" />
+      <ReferenceIcon name={service.id} fallback={Icon} size={29}/>
       <span className="lbl">{service.title}</span>
     </Link>
   );
@@ -64,7 +65,7 @@ export function CategorySection({ category }: { category: Category }) {
   return (
     <section className={`panel ${category.tone}`} aria-labelledby={`cat-${category.id}`}>
       <div className="panel-head">
-        <span className="panel-icon"><Icon size={24} aria-hidden="true" /></span>
+        <span className="panel-icon"><ReferenceIcon name={category.id} fallback={Icon} size={24}/></span>
         <div className="panel-titles"><h2 id={`cat-${category.id}`}>{category.title}</h2><p>{category.description}</p></div>
         <Link className="see-all" to={`/categories/${category.id}`} aria-label={`مشاهده همه ${category.title}`}>
           مشاهده همه <ChevronLeft size={16} aria-hidden="true" />
@@ -87,21 +88,26 @@ export function EmptyState({ title, text, action }: { title: string; text: strin
 const NAV = [
   { to: '/', label: 'خانه', icon: Home },
   { to: '/services', label: 'خدمات', icon: LayoutGrid },
-  { to: '/services/shahrbin', label: 'شهربین', icon: Megaphone, center: true },
   { to: '/requests', label: 'درخواست‌ها', icon: ClipboardList },
-  { to: '/account', label: 'حساب من', icon: User },
+  { to: '/notifications', label: 'اعلان‌ها', icon: Bell },
+  { to: '/account', label: 'پروفایل', icon: User },
 ];
 export function BottomNavigation() {
   const { pathname } = useLocation();
-  if (pathname.startsWith('/shahrbin/new') || pathname.startsWith('/login') || pathname.startsWith('/welcome') || pathname.startsWith('/admin')) return null; // wizard has its own action bar
+  const unread = useNotices().data?.some(item => !item.read);
+  if (pathname.startsWith('/shahrbin/new') || pathname.startsWith('/login') || pathname.startsWith('/welcome') || pathname.startsWith('/admin')) return null;
+  const current = pathname === '/' ? '/'
+    : /^\/(requests|shahrbin\/(reports|success))/.test(pathname) ? '/requests'
+    : /^\/(notifications|city-news)/.test(pathname) ? '/notifications'
+    : /^\/(account|more|support)/.test(pathname) ? '/account' : '/services';
   return (
     <nav className="bottom-nav" aria-label="ناوبری اصلی">
       <ul>
-        {NAV.map(({ to, label, icon: Icon, center }) => (
+        {NAV.map(({ to, label, icon: Icon }) => (
           <li key={to}>
-            <NavLink to={to} end={to === '/' || to === '/services' || to === '/account'} className={() => `nav-item${center ? ' center' : ''}`} aria-current={center && pathname.startsWith('/shahrbin') ? 'page' : undefined}>
-              <Icon size={center ? 26 : 24} aria-hidden="true" /><span>{label}</span>
-            </NavLink>
+            <Link to={to} className="nav-item" aria-current={current === to ? 'page' : undefined}>
+              <span className="ref-nav-icon"><Icon size={23} aria-hidden="true"/>{to === '/notifications' && unread && <i aria-label="اعلان خوانده‌نشده"/>}</span><span>{label}</span>
+            </Link>
           </li>
         ))}
       </ul>

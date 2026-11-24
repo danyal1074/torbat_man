@@ -4,7 +4,9 @@ import { Navigate, Route, Routes, useSearchParams } from 'react-router';
 import { BottomNavigation } from './components/ui';
 import ServicesPage from './pages/ServicesPage';
 import { GuidePage, ReportsMapPage, MyReportsPage, NewReportPage, ReportDetailPage, ShahrbinHome, SuccessPage } from './shahrbin/pages';
-import { WelcomePage, HomePage, SearchPage, NotificationsPage, LoginPage, VerifyPage, ProfileSetupPage, AccountPage, EditProfilePage, FavoritesPage, SettingsPage, PrivacyPage, SupportPage } from './app/pages';
+import { WelcomePage, SearchPage, NotificationsPage, LoginPage, VerifyPage, ProfileSetupPage, AccountPage, EditProfilePage, FavoritesPage, SettingsPage, PrivacyPage, SupportPage } from './app/pages';
+import { ReferenceHome } from './pages/ReferenceHome';
+import { MorePage, TermsPage } from './pages/MorePage';
 import { LiveCatalog, LiveService, CityAnnouncements } from './services/catalog';
 import { session } from './state/session';
 
@@ -24,9 +26,11 @@ export default function App() {
   }, []);
   return (
     <QueryClientProvider client={client}>
-    <div className="shell">
+    <div className="shell ref-shell">
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<ReferenceHome />} />
+        <Route path="/more" element={<MorePage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />

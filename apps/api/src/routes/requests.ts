@@ -2,7 +2,7 @@ import { formEntries } from '../workflows/form-entries';
 import type { FastifyInstance } from 'fastify';
 import { normalizePersian } from '@torbat/i18n';
 import { cursorWhere, encodeCursor, newestFirst } from '../lib/pagination';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, like, ne, sql } from 'drizzle-orm';
 import { createRequestBody, commentBody, reopenBody, rateBody, myRequestsQuery } from '@torbat/contracts';
 import { requests, requestStatusHistory, requestComments, attachments, services, organizations } from '../db/schema';
 import { route } from '../lib/route';
@@ -46,6 +46,15 @@ export function requestsRoutes(app: FastifyInstance) {
                 .orderBy(...newestFirst(requests.createdAt,requests.id))
                 .limit(query.limit+1);
             const page=rows.slice(0,query.limit);
+            const thumbnails = page.length ? await app.ctx.db.selectDistinctOn([attachments.requestId], {
+                requestId: attachments.requestId,
+                id: attachments.id,
+            }).from(attachments).where(and(
+                inArray(attachments.requestId, page.map(({ req }) => req.id)),
+                like(attachments.mimeType, 'image/%'),
+                ne(attachments.scanStatus, 'infected'),
+            )).orderBy(attachments.requestId, attachments.createdAt, attachments.id) : [];
+            const coverByRequest = new Map(thumbnails.map(attachment => [attachment.requestId, app.ctx.storage.signUrl(attachment.id)]));
             const data = page.map(({ req: r, serviceTitle, serviceSlug, workflow, orgName }) => ({
                 id: r.id,
                 trackingCode: r.trackingCode,
@@ -59,6 +68,7 @@ export function requestsRoutes(app: FastifyInstance) {
                 status: r.status,
                 priority: r.priority,
                 description: r.description,
+                thumbnailUrl: coverByRequest.get(r.id),
                 address: r.address ?? undefined,
                 createdAt: r.createdAt.toISOString(),
                 updatedAt: r.updatedAt.toISOString(),

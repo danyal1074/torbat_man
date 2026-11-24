@@ -32,18 +32,33 @@ test('ظاهر کلاد، چیدمان راست‌به‌چپ و نمایش خد
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /به تربتینو خوش آمدید/ })).toBeVisible();
-    await expect(page.locator('.hero-home .brand img')).toHaveJSProperty('complete', true);
+    await expect(page.getByRole('heading', { name: 'شهر تو، همراه تو' })).toBeVisible();
+    await expect(page.locator('.ref-home-header .brand img')).toHaveJSProperty('complete', true);
     expect(await page.locator('html').getAttribute('dir')).toBe('rtl');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: 'test-results/claude-home-' + width + '.png', animations: 'disabled', fullPage: true });
+    await page.screenshot({ path: 'test-results/torbatino-home-' + width + '.png', animations: 'disabled', fullPage: true });
   }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/services');
   await expect(page.getByRole('heading', { name: 'همه خدمات', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'خدمات شهری', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'نمای فهرست' }).click();
+  await page.getByRole('button', { name: 'سلامت', exact: true }).click();
+  await expect(page.getByRole('link', { name: /سلامت و بهداشت/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /اصناف و اقتصاد/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'نمای کارت‌ها' }).click();
+  await page.screenshot({ path: 'test-results/torbatino-services.png', animations: 'disabled', fullPage: true });
   await page.getByRole('link', { name: 'کاتالوگ سامانه و وضعیت ثبت خدمات' }).click();
   await expect(page.getByRole('heading', { name: 'کاتالوگ سامانه' })).toBeVisible();
   await expect(page.getByRole('link', { name: /خرابی آسفالت/ })).toBeVisible();
+  await page.goto('/more');
+  await expect(page.getByRole('heading', { name: 'بیشتر', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'شرایط استفاده', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'شرایط استفاده', exact: true })).toBeVisible();
+  await page.goto('/city-map');
+  await page.getByRole('searchbox', { name: 'جست‌وجوی مکان یا خدمت' }).fill('نانوایی');
+  await expect(page.getByRole('link', { name: 'نانوایی', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'اتوبوس', exact: true })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -66,6 +81,11 @@ test('فرم کلاد گزارش و پیوست واقعی می‌سازد و ش�
   await expect(page.locator('.code-box strong')).toHaveText(/^TM-/);
   await page.getByRole('link', { name: 'مشاهده وضعیت گزارش' }).click();
   await expect(page.getByRole('link', { name: /مشاهده پیوست/ })).toHaveCount(1);
+  await page.goto('/requests');
+  const resultCard = page.locator('.ref-request-card').first();
+  await expect(resultCard.locator('img')).toHaveJSProperty('complete', true);
+  await expect(resultCard.locator('img')).toHaveJSProperty('naturalWidth', 8);
+  await resultCard.click();
   const context = await browser.newContext();
   try {
     await staff(context.request, '09130000001');
