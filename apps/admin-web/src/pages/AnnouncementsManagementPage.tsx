@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Dialog, FormField } from '@torbat/ui';
-import { Megaphone, Plus, Calendar, Clock, RefreshCw } from 'lucide-react';
-import { formatRelative, formatJalaliDate } from '@torbat/i18n';
-import { adminApi } from '../api/client';
+import { Plus, RefreshCw } from 'lucide-react';
+import { formatRelative } from '@torbat/i18n';
+import { adminApi, type StaffAnnouncement } from '../api/client';
+import { useStaffAuth } from '../context/StaffAuthContext';
 
 export const AnnouncementsManagementPage: React.FC = () => {
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const { staff } = useStaffAuth();
+  const manager = staff?.platformRole ? undefined : staff?.memberships.find(member => member.role === 'org_manager');
+  const [announcements, setAnnouncements] = useState<StaffAnnouncement[]>([]);
+  const [loadError, setLoadError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [updating, setUpdating] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [title, setTitle] = useState('');
@@ -15,10 +21,11 @@ export const AnnouncementsManagementPage: React.FC = () => {
 
   const loadAnnouncements = () => {
     setLoading(true);
+    setLoadError('');
     adminApi
       .getAnnouncements()
       .then((res) => setAnnouncements(res.data))
-      .catch((err) => console.error(err))
+      .catch((error: Error) => setLoadError(error.message))
       .finally(() => setLoading(false));
   };
 
@@ -30,21 +37,35 @@ export const AnnouncementsManagementPage: React.FC = () => {
     e.preventDefault();
     if (!title.trim() || !body.trim() || submitting) return;
     setSubmitting(true);
+    setFormError('');
     try {
       await adminApi.createAnnouncement({
         title: title.trim(),
         body: body.trim(),
         importance,
+        sourceName: manager?.orgName ?? 'تربتینو',
+        organizationId: manager?.organizationId,
       });
       setShowCreateModal(false);
       setTitle('');
       setBody('');
       loadAnnouncements();
-    } catch (err: any) {
-      alert(err.message || 'خطا در ثبت اطلاعیه');
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'خطا در ثبت اطلاعیه');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const updateStatus = async (id: string, status: StaffAnnouncement['status']) => {
+    setUpdating(id);
+    setFormError('');
+    try {
+      const { data } = await adminApi.updateAnnouncementStatus(id, status);
+      setAnnouncements(current => current.map(item => item.id === id ? data : item));
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'تغییر وضعیت انجام نشد.');
+    } finally { setUpdating(undefined); }
   };
 
   return (
@@ -66,7 +87,7 @@ export const AnnouncementsManagementPage: React.FC = () => {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => { setFormError(''); setShowCreateModal(true); }}
             className="flex items-center gap-1.5 bg-[#592582] hover:bg-[#7541A5]"
           >
             <Plus size={16} />
@@ -75,6 +96,8 @@ export const AnnouncementsManagementPage: React.FC = () => {
         </div>
       </div>
 
+      {loadError && <p role="alert" className="text-rose-700">{loadError}</p>}
+      {!showCreateModal && formError && <p role="alert" className="text-rose-700">{formError}</p>}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-xs">در حال بارگذاری اطلاعیه‌ها...</div>
@@ -93,14 +116,18 @@ export const AnnouncementsManagementPage: React.FC = () => {
                       </span>
                     )}
                     <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
-                      {a.status === 'published' ? 'منتشرشده' : 'پیش‌نویس'}
+                      {{ published: 'منتشرشده', draft: 'پیش‌نویس', archived: 'بایگانی‌شده' }[a.status]}
                     </span>
                   </div>
                   <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{a.body}</p>
                 </div>
 
-                <div className="text-[11px] text-slate-400 shrink-0">
-                  {formatRelative(new Date(a.createdAt))}
+                <div className="flex items-center gap-2">
+                  <time className="text-[11px] text-slate-500" dateTime={a.createdAt}>{formatRelative(new Date(a.createdAt))}</time>
+                  {a.status === 'draft' && <Button variant="primary" size="sm" disabled={Boolean(updating)}
+                    onClick={() => void updateStatus(a.id, 'published')}>انتشار آزمایشی</Button>}
+                  {a.status === 'published' && <Button variant="outline" size="sm" disabled={Boolean(updating)}
+                    onClick={() => void updateStatus(a.id, 'archived')}>بایگانی</Button>}
                 </div>
               </div>
             ))}
@@ -115,9 +142,11 @@ export const AnnouncementsManagementPage: React.FC = () => {
         title="ثبت اطلاعیه جدید شهری"
       >
         <form onSubmit={handleCreate} className="space-y-4 pt-2 text-xs">
+          {formError && <p role="alert" className="text-rose-700">{formError}</p>}
           <FormField label="عنوان اطلاعیه" required>
             <input
               type="text"
+              required minLength={5} maxLength={140}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="مثلاً: اطلاعیه قطعی موقت آب در محله باغسلطانی..."
@@ -128,7 +157,7 @@ export const AnnouncementsManagementPage: React.FC = () => {
           <FormField label="اهمیت اطلاعیه">
             <select
               value={importance}
-              onChange={(e) => setImportance(e.target.value as any)}
+              onChange={(e) => setImportance(e.target.value === 'important' ? 'important' : 'normal')}
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-purple-600"
             >
               <option value="normal">عادی</option>
@@ -139,6 +168,7 @@ export const AnnouncementsManagementPage: React.FC = () => {
           <FormField label="متن کامل اطلاعیه" required>
             <textarea
               rows={4}
+              required minLength={10} maxLength={4000}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="شرح کامل اطلاعیه..."
@@ -156,7 +186,7 @@ export const AnnouncementsManagementPage: React.FC = () => {
               isLoading={submitting}
               className="bg-[#592582] hover:bg-[#7541A5]"
             >
-              انتشار اطلاعیه
+              ذخیره پیش‌نویس
             </Button>
           </div>
         </form>

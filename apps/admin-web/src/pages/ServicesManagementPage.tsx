@@ -1,19 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Button, StatusChip } from '@torbat/ui';
-import { LayoutGrid, CheckCircle, AlertTriangle, RefreshCw, Search } from 'lucide-react';
-import { adminApi } from '../api/client';
+import React, { useState, useEffect, type FormEvent } from 'react';
+import { Button, Dialog, FormField } from '@torbat/ui';
+import { RefreshCw } from 'lucide-react';
+import { adminApi, type StaffService } from '../api/client';
 
 export const ServicesManagementPage: React.FC = () => {
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<StaffService[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [editing, setEditing] = useState<StaffService>();
+  const [saving, setSaving] = useState(false);
 
   const loadServices = () => {
     setLoading(true);
+    setError('');
     adminApi
       .getServices()
       .then((res) => setServices(res.data))
-      .catch((err) => console.error(err))
+      .catch((error: Error) => setError(error.message))
       .finally(() => setLoading(false));
   };
 
@@ -29,13 +34,27 @@ export const ServicesManagementPage: React.FC = () => {
       (s.description && s.description.includes(search.trim()))
   );
 
+  const saveService = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editing || saving) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      await adminApi.updateService(editing.id, { title: editing.title.trim(), description: editing.description.trim() });
+      setEditing(undefined);
+      loadServices();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'تغییرات خدمت ذخیره نشد.');
+    } finally { setSaving(false); }
+  };
+
   return (
     <div className="space-y-5 text-right">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-black text-slate-800">مدیریت خدمات و گردش‌کارهای شهری</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            کاتالوگ ۴۴ خدمت سامانه تربتینو و وضعیت اتصال آن‌ها به ادارات
+            خدمات قابل ویرایش و وضعیت اتصال آن‌ها به ادارات
           </p>
         </div>
 
@@ -55,9 +74,12 @@ export const ServicesManagementPage: React.FC = () => {
         />
       </div>
 
+      {error && <p role="alert" className="text-rose-700">{error}</p>}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-xs">در حال بارگذاری خدمات...</div>
+        ) : filtered.length === 0 ? (
+          <p className="p-6 text-center text-sm text-slate-600">خدمتی یافت نشد.</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {filtered.map((s) => (
@@ -83,14 +105,29 @@ export const ServicesManagementPage: React.FC = () => {
 
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[11px] text-slate-400">
-                    گردش‌کار: <strong>{s.workflow}</strong>
+                    گردش‌کار {s.workflow}
                   </span>
+                  <Button variant="outline" size="sm" onClick={() => { setSaveError(''); setEditing(s); }}>ویرایش</Button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      <Dialog isOpen={Boolean(editing)} title="ویرایش اطلاعات خدمت" onClose={() => { if (!saving) setEditing(undefined); }}>
+        {editing && <form className="space-y-3" onSubmit={saveService}>
+          {saveError && <p role="alert" className="text-rose-700">{saveError}</p>}
+          <FormField label="عنوان خدمت" required>
+            <input className="w-full rounded-xl border border-slate-300 p-2" required minLength={3} maxLength={140}
+              value={editing.title} onChange={event => setEditing({ ...editing, title: event.target.value })} />
+          </FormField>
+          <FormField label="شرح خدمت" required>
+            <textarea className="w-full rounded-xl border border-slate-300 p-2" required minLength={10} maxLength={2000} rows={4}
+              value={editing.description} onChange={event => setEditing({ ...editing, description: event.target.value })} />
+          </FormField>
+          <Button type="submit" variant="primary" isLoading={saving}>ذخیره تغییرات</Button>
+        </form>}
+      </Dialog>
     </div>
   );
 };

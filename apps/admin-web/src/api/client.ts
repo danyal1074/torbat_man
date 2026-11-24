@@ -131,6 +131,22 @@ const adaptStaff = (staff: StaffPayload): StaffMe => ({
 });
 
 export interface DemoStaffAccount { mobile: string; label: string; kind: 'citizen' | 'staff' }
+export interface StaffService {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  workflow: string;
+  status: 'active_demo' | 'informational' | 'coming_soon' | 'disabled';
+}
+export interface StaffAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  importance: 'normal' | 'important';
+  status: 'draft' | 'published' | 'archived';
+  createdAt: string;
+}
 export interface StaffFeedback { id: string; kind: string; message: string; status: 'new' | 'seen'; createdAt: string }
 
 export const adminApi = {
@@ -256,22 +272,25 @@ export const adminApi = {
 
   // Services
   getServices: async () => {
-    return request<{ data: any[] }>('/admin/services');
+    return request<{ data: StaffService[] }>('/admin/services');
   },
+  updateService: async (id: string, patch: Pick<StaffService, 'title' | 'description'>) =>
+    request<{ data: { success: boolean } }>('/admin/services/' + encodeURIComponent(id), {
+      method: 'PATCH', body: JSON.stringify(patch),
+    }),
   getFeedback: async () => request<{ data: StaffFeedback[] }>('/admin/feedback?limit=50'),
   reviewFeedback: async (id: string) => request<{ data: StaffFeedback }>('/admin/feedback/' + encodeURIComponent(id), {
     method: 'PATCH', body: JSON.stringify({ status: 'seen' }),
   }),
 
-  // Announcements
-  getAnnouncements: async () => {
-    return request<{ data: any[] }>('/admin/announcements');
-  },
-
-  createAnnouncement: async (payload: any) => {
-    return request<{ data: any }>('/admin/announcements', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
+  getAnnouncements: async () => request<{ data: StaffAnnouncement[] }>('/admin/announcements'),
+  createAnnouncement: async (payload: {
+    title: string; body: string; sourceName: string; importance: 'normal' | 'important'; organizationId?: string;
+  }) => request<{ data: StaffAnnouncement }>('/admin/announcements', {
+    method: 'POST', body: JSON.stringify(payload),
+  }),
+  updateAnnouncementStatus: async (id: string, status: StaffAnnouncement['status']) =>
+    request<{ data: StaffAnnouncement }>('/admin/announcements/' + encodeURIComponent(id), {
+      method: 'PATCH', body: JSON.stringify({ status }),
+    }),
 };

@@ -412,7 +412,7 @@ export const CaseDetailPage: React.FC<CaseDetailPageProps> = ({ id, onBack }) =>
                 placeholder={
                   commentVisibility === 'internal'
                     ? 'یادداشت داخلی برای همکاران و سرپرست...'
-                    : 'پاسخ رسمی به شهروند (همراه با پیامک اطلاع‌رسانی)...'
+                    : 'پاسخ به شهروند (همراه با اعلان داخل سامانه)…'
                 }
                 className="w-full p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-600"
               />

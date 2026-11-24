@@ -190,6 +190,10 @@ path.write_text(config.replace('proxy_pass http://127.0.0.1:4180;', 'proxy_pass 
 PY
 nginx -t
 systemctl reload nginx
+for attempt in $(seq 1 15); do
+    if curl -fsS --resolve "$domain:443:127.0.0.1" "https://$domain/health" | check_mode 2>/dev/null; then break; fi
+    sleep 1
+done
 curl -fsS --resolve "$domain:443:127.0.0.1" "https://$domain/health" | check_mode
 test "$(snapshot_other_configs)" = "$other_configs"
 curl -fsS http://127.0.0.1:5000/api/health >/dev/null
