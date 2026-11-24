@@ -38,7 +38,9 @@ const server=http.createServer(async(req,res)=>{
   }
   res.setHeader('Content-Type',types[extname(filename)]??'application/octet-stream');
   res.setHeader('Content-Length',info.size);
-  res.setHeader('Cache-Control',pathname.startsWith('/assets/')?'public,max-age=31536000,immutable':'no-cache');
+  const immutable=/^\/(?:admin\/)?assets\//.test(pathname);
+  const revalidate=extname(filename)==='.html'||['/sw.js','/registerSW.js','/manifest.webmanifest'].includes(pathname);
+  res.setHeader('Cache-Control',immutable?'public,max-age=31536000,immutable':revalidate?'no-store':'no-cache');
   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.openstreetmap.org; frame-src 'self' https://www.openstreetmap.org; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
   res.writeHead(200);if(req.method==='HEAD'){res.end();return;}createReadStream(filename).pipe(res);
  }catch{if(!res.headersSent)res.writeHead(400);res.end();}

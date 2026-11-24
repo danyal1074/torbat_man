@@ -7,8 +7,6 @@ enabled=/etc/nginx/sites-enabled/torbat.digiral.ir.conf
 test -L "$base/current"
 test ! -e "$available" && test ! -L "$available" || exit 1
 test ! -e "$enabled" && test ! -L "$enabled" || exit 1
-test ! -e "$base/shared/nginx.htpasswd"
-test ! -e "$base/shared/demo-access.txt"
 exec 9>"$base/shared/update.lock"
 flock -n 9
 nginx_config="$(nginx -T 2>/dev/null)"
@@ -26,7 +24,7 @@ rollback_on_error() {
     trap - EXIT
     if [ "$result" -ne 0 ]; then
         echo 'Activation failed; restoring the previous private setup.' >&2
-        rm -f -- "$enabled" "$available" "$base/shared/nginx.htpasswd" "$base/shared/demo-access.txt"
+        rm -f -- "$enabled" "$available"
         if [ "$env_saved" = true ]; then
             install -m 0600 "$old_env" "$base/shared/api.env"
             systemctl restart torbat-man-api || true
@@ -37,20 +35,12 @@ rollback_on_error() {
 }
 trap rollback_on_error EXIT
 python3 - <<'PY'
-import pathlib,hashlib,json,subprocess,secrets,os,grp
+import pathlib,hashlib,json,subprocess
 base=pathlib.Path('/opt/torbat-man/shared')
 configs={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in pathlib.Path('/etc/nginx/sites-enabled').iterdir()}
 (base/'public-baseline/nginx.json').write_text(json.dumps(configs))
 processes=[{'name':p['name'],'pid':p.get('pid'),'status':p['pm2_env']['status'],'restarts':p['pm2_env']['restart_time']} for p in json.loads(subprocess.check_output(['pm2','jlist']))]
 (base/'public-baseline/pm2.json').write_text(json.dumps(processes))
-password=secrets.token_urlsafe(24)
-hashed=subprocess.run(['openssl','passwd','-6','-stdin'],input=password+'\n',text=True,capture_output=True,check=True).stdout.strip()
-p=base/'nginx.htpasswd'
-with p.open('x') as f:f.write('torbat:'+hashed+'\n')
-os.chown(p,0,grp.getgrnam('www-data').gr_gid);os.chmod(p,0o640)
-p=base/'demo-access.txt'
-with p.open('x') as f:f.write('URL: https://torbat.digiral.ir\nUsername: torbat\nPassword: '+password+'\n\nPrivate preview only. OTP and organizations are demo.\n')
-os.chmod(p,0o600)
 PY
 cat > "$available" <<'NGINX'
 server {
@@ -111,8 +101,7 @@ server {
     ssl_certificate /etc/letsencrypt/live/torbat.digiral.ir/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/torbat.digiral.ir/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-    auth_basic "Torbat Man - demo login";
-    auth_basic_user_file /opt/torbat-man/shared/nginx.htpasswd;
+    auth_basic off;
     client_max_body_size 6m;
     add_header Strict-Transport-Security "max-age=86400" always;
     add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
@@ -124,19 +113,10 @@ server {
     proxy_send_timeout 35s;
     proxy_buffering off;
 
-    # Public browsing is open. Demo OTP and any new private routes retain the entry gate.
-    location ~ "^/(?:|index\.html|services(?:/[^/]+)?(?:/[^/]+)?|categories/[^/]+|catalog(?:/[^/]+)?|welcome|more|terms|search|city-map|city-news|shahrbin(?:/(?:map|guide|new))?|assistant|support|health|app-icon\.svg|logo-mark\.png|torbatino-(?:mark|skyline)\.svg|brand/[a-z-]+\.png|manifest\.webmanifest|registerSW\.js|sw\.js|workbox-[a-z0-9]+\.js|v1/(?:services(?:/[^/]+)?|announcements|ai/assistant))$" {
-        auth_basic off;
-        proxy_pass http://127.0.0.1:4180;
-    }
-    location = /v1/me {
-        auth_basic off;
-        limit_except GET { auth_basic "Torbat Man - demo login"; }
-        proxy_pass http://127.0.0.1:4180;
-    }
-    location ^~ /assets/ {
-        auth_basic off;
-        proxy_pass http://127.0.0.1:4180;
+    # Demo codes are available only from the loopback service via SSH tunneling.
+    location ~* ^/v1/(?:admin/)?auth/(?:request-otp|verify-otp)/?$ {
+        default_type application/json;
+        return 403 '{"error":{"code":"DEMO_LOGIN_PRIVATE","message":"ورود آزمایشی از دامنه عمومی در دسترس نیست. پیامک واقعی هنوز فعال نشده است."}}';
     }
     location / {
         proxy_pass http://127.0.0.1:4180;
@@ -156,13 +136,16 @@ assert before==after,'An existing PM2 process changed during setup'
 print('Verified: all pre-existing vhost files and PM2 processes unchanged.')
 PY
 curl -fsS http://127.0.0.1:5000/api/health >/dev/null
-test "$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' --resolve torbat.digiral.ir:443:127.0.0.1 https://torbat.digiral.ir/health)" = 200
-test "$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' --resolve torbat.digiral.ir:443:127.0.0.1 https://torbat.digiral.ir/admin)" = 401
-python3 - <<'PY'
-from pathlib import Path
-import subprocess
-password = next(line.split(': ', 1)[1] for line in Path('/opt/torbat-man/shared/demo-access.txt').read_text().splitlines() if line.startswith('Password: '))
-subprocess.run(['curl', '-fsS', '--max-time', '10', '--resolve', 'torbat.digiral.ir:443:127.0.0.1', '--config', '-', 'https://torbat.digiral.ir/health'], input=f'user = "torbat:{password}"\n', text=True, check=True)
-PY
+check_status() {
+ curl -sS --max-time 10 -o /dev/null -w '%{http_code}' --resolve torbat.digiral.ir:443:127.0.0.1 "https://torbat.digiral.ir$1"
+}
+for attempt in $(seq 1 10); do
+ if [ "$(check_status /admin/)" = 200 ]; then break; fi
+ sleep 1
+done
+test "$(check_status /)" = 200
+test "$(check_status /admin/)" = 200
+test "$(check_status /v1/auth/request-otp)" = 403
+test "$(check_status /v1/admin/auth/verify-otp)" = 403
 trap - EXIT
-echo 'Torbat Man HTTPS browsing enabled. Demo login remains protected.'
+echo 'Torbatino HTTPS browsing has no password prompt. Demo OTP is private.'
