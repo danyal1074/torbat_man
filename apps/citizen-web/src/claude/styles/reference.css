@@ -187,7 +187,7 @@
 .ref-map-search input { background: transparent; border: 0; min-width: 0; width: 100%; font: inherit; }
 .ref-map-card { position: relative; isolation: isolate; }
 .ref-map-card .tn-leaflet { height: clamp(265px, 51vh, 474px); aspect-ratio: auto; }
-.ref-map-control { position: absolute; z-index: 2; inset-inline-end: 10px; width: 40px; height: 40px; display: grid; place-items: center; background: #fff; color: #34294b; border: 1px solid var(--ref-line); border-radius: 50%; box-shadow: 0 2px 5px #21133522; cursor: pointer; }
+.ref-map-control { position: absolute; z-index: 2; inset-inline-start: 10px; width: 40px; height: 40px; display: grid; place-items: center; background: #fff; color: #34294b; border: 1px solid var(--ref-line); border-radius: 50%; box-shadow: 0 2px 5px #21133522; cursor: pointer; }
 .ref-map-layers { inset-block-start: 10px; }
 .ref-map-locate { inset-block-end: 35px; }
 .ref-map .leaflet-top.leaflet-left { left: 0; right: auto; }
