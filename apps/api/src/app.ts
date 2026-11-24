@@ -66,6 +66,7 @@ export async function createApp(ctx: AppContext): Promise<FastifyInstance> {
     app.get('/health', async () => ({
         status: 'ok',
         appEnv: ctx.env.APP_ENV,
+        publicDemo: ctx.env.PUBLIC_DEMO,
         timestamp: new Date().toISOString(),
     }));
     // Register Routes

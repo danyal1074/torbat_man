@@ -118,7 +118,34 @@ export interface DashboardKPIs {
   closed: number;
 }
 
+type StaffPayload = Omit<StaffMe, 'userId' | 'memberships'> & {
+  id: string;
+  memberships: { organizationId: string; organizationCode: string; organizationName: string; role: StaffMe['memberships'][number]['role'] }[];
+};
+const adaptStaff = (staff: StaffPayload): StaffMe => ({
+  ...staff,
+  userId: staff.id,
+  memberships: staff.memberships.map(member => ({
+    organizationId: member.organizationId, orgCode: member.organizationCode, orgName: member.organizationName, role: member.role,
+  })),
+});
+
+export interface DemoStaffAccount { mobile: string; label: string; kind: 'citizen' | 'staff' }
+export interface StaffFeedback { id: string; kind: string; message: string; status: 'new' | 'seen'; createdAt: string }
+
 export const adminApi = {
+  health: async () => {
+    const result = await fetch('/health', { cache: 'no-store' });
+    if (!result.ok) throw new Error('وضعیت سامانه دریافت نشد.');
+    return result.json() as Promise<{ publicDemo?: boolean }>;
+  },
+  demoAccounts: async () => request<{ data: DemoStaffAccount[] }>('/demo/accounts'),
+  demoLogin: async (mobile: string) => {
+    const { user } = await request<{ user: StaffPayload }>('/demo/session', {
+      method: 'POST', body: JSON.stringify({ mobile, kind: 'staff' }),
+    });
+    return adaptStaff(user);
+  },
   // Staff Auth
   requestOtp: async (mobile: string) => {
     return request<{
@@ -133,14 +160,14 @@ export const adminApi = {
   },
 
   verifyOtp: async (mobile: string, code: string) => {
-    return request<StaffMe>('/admin/auth/verify-otp', {
+    return adaptStaff(await request<StaffPayload>('/admin/auth/verify-otp', {
       method: 'POST',
       body: JSON.stringify({ mobile, code }),
-    });
+    }));
   },
 
   getMe: async () => {
-    return request<StaffMe>('/admin/me');
+    return adaptStaff(await request<StaffPayload>('/admin/me'));
   },
 
   logout: async () => {
@@ -201,7 +228,7 @@ export const adminApi = {
   transferRequest: async (id: string, payload: { targetOrgId: string; reason: string }) => {
     return request<{ data: { success: boolean } }>(`/admin/requests/${id}/transfer`, {
       method: 'PATCH',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ organizationId: payload.targetOrgId, reason: payload.reason }),
     });
   },
 
@@ -209,7 +236,7 @@ export const adminApi = {
   addComment: async (id: string, payload: { body: string; visibility: 'internal' | 'public_to_citizen' }) => {
     return request<{ data: any }>(`/admin/requests/${id}/comments`, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ body: payload.body, visibility: payload.visibility === 'internal' ? 'internal' : 'public' }),
     });
   },
 
@@ -231,6 +258,10 @@ export const adminApi = {
   getServices: async () => {
     return request<{ data: any[] }>('/admin/services');
   },
+  getFeedback: async () => request<{ data: StaffFeedback[] }>('/admin/feedback?limit=50'),
+  reviewFeedback: async (id: string) => request<{ data: StaffFeedback }>('/admin/feedback/' + encodeURIComponent(id), {
+    method: 'PATCH', body: JSON.stringify({ status: 'seen' }),
+  }),
 
   // Announcements
   getAnnouncements: async () => {

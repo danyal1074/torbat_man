@@ -13,7 +13,7 @@ import {
 import { useStaffAuth } from '../context/StaffAuthContext';
 
 export const StaffLoginPage: React.FC = () => {
-  const { loginAsDemoStaff, requestOtp, loginWithOtp } = useStaffAuth();
+  const { loginAsDemoStaff, requestOtp, loginWithOtp, publicDemo, demoAccounts } = useStaffAuth();
   const [mobile, setMobile] = useState('');
   const [code, setCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -83,6 +83,22 @@ export const StaffLoginPage: React.FC = () => {
             </div>
           )}
 
+          {publicDemo ? (
+            <section className="space-y-3">
+              <h2 className="text-sm font-bold text-purple-950">ورود آزمایشی به پنل‌ها</h2>
+              <p className="text-xs text-slate-600">یک حساب نمونه انتخاب کنید. این محیط عمومی است و برای تمرین از داده ساختگی استفاده کنید.</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {demoAccounts.map(account => (
+                  <button key={account.mobile} type="button" disabled={loading}
+                    className="rounded-xl border border-purple-200 bg-purple-50 p-3 text-right text-xs font-bold text-purple-950 hover:bg-purple-100 disabled:opacity-60"
+                    onClick={() => void handleDemoLogin(account.mobile)}>
+                    {account.label}
+                  </button>
+                ))}
+              </div>
+              {!demoAccounts.length && <p className="text-xs text-slate-600">در حال دریافت حساب‌های نمونه…</p>}
+            </section>
+          ) : <>
           {/* 1. Fast Demo Switcher */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -232,6 +248,7 @@ export const StaffLoginPage: React.FC = () => {
               </div>
             )}
           </div>
+          </>}
         </div>
 
         <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">

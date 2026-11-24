@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Bell, CalendarDays, CheckCircle2, ChevronLeft, ClipboardList, Ellipsis, Heart, Info, LogOut, Settings, UserPen, UserRound, Users, LayoutDashboard } from 'lucide-react';
 import { EmptyState, PageHeader, SearchField, ServiceCard } from '../components/ui';
@@ -8,7 +9,7 @@ import { OTP_LEN, Prefs, applyPrefs, loadPrefs, maskPhone, normalizePhone, sessi
 import { Field } from '../shahrbin/parts';
 import { faDigits, relTime } from '../shahrbin/model';
 import { useMarkNotice, useNotices } from '../state/notifications';
-import { api, json, messageOf } from '../lib/backend';
+import { api, json, messageOf, publicDemoQuery } from '../lib/backend';
 import { Dialog, MenuItem, Toggle, Unauthorized } from './parts';
 
 const DemoNote = ({ text }: { text: string }) => <p className="demo-note" role="note">{text}</p>;
@@ -69,6 +70,20 @@ function AuthShell({ title, sub, children }: { title: string; sub: string; child
 export function LoginPage() {
   const navigate = useNavigate(); const [v, setV] = useState(''); const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false); const [sp] = useSearchParams();
+  const mode = useQuery(publicDemoQuery);
+  const samples = useQuery({
+    queryKey: ['demo-accounts'],
+    queryFn: ({ signal }) => api<{ data: { mobile: string; label: string; kind: string }[] }>('/demo/accounts', { signal }),
+    enabled: mode.data?.publicDemo === true,
+  });
+  const signInSample = async (mobile: string) => {
+    setBusy(true); setErr('');
+    try {
+      await session.signInDemo(mobile);
+      const next = sp.get('next');
+      navigate(next?.startsWith('/') && !next.startsWith('//') && !next.includes(String.fromCharCode(92)) ? next : '/', { replace: true });
+    } catch (error) { setErr(messageOf(error)); } finally { setBusy(false); }
+  };
   const go = async (e: FormEvent) => {
     e.preventDefault();
     const phone = normalizePhone(v);
@@ -79,6 +94,21 @@ export function LoginPage() {
       navigate('/login/verify', { state: { phone, devCode, next: sp.get('next') } });
     } catch (error) { setErr(messageOf(error)); } finally { setBusy(false); }
   };
+  if (mode.isPending) return <AuthShell title="ورود" sub=""><p role="status">در حال بررسی…</p></AuthShell>;
+  if (mode.isError) return <AuthShell title="ورود" sub=""><button className="btn-soft" onClick={() => void mode.refetch()}>تلاش دوباره</button></AuthShell>;
+  if (mode.data?.publicDemo) return <AuthShell title="ورود آزمایشی" sub="انتخاب حساب شهروند">
+    <div className="stack">
+      <DemoNote text="حساب‌ها و پرونده‌های این محیط بین آزمایش‌کنندگان مشترک‌اند. شماره، نشانی، تصویر یا اطلاعات واقعی وارد نکنید."/>
+      {samples.isPending && <p role="status">در حال دریافت حساب‌ها…</p>}
+      {samples.isError && <button className="btn-soft" onClick={() => void samples.refetch()}>دریافت دوباره حساب‌ها</button>}
+      {samples.data?.data.filter(account => account.kind === 'citizen').map(account => <button
+        className="btn-main" type="button" key={account.mobile} disabled={busy} onClick={() => void signInSample(account.mobile)}>
+        ورود با «{account.label}»
+      </button>)}
+      {err && <p className="field-err" role="alert">{err}</p>}
+      <a className="btn-soft" href="/admin/">ورود آزمایشی کارکنان</a>
+    </div>
+  </AuthShell>;
   return (
     <AuthShell title="ورود" sub="شهر تو، همراه تو">
       <form className="stack" onSubmit={go} noValidate>

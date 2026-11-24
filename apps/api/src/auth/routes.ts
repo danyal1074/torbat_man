@@ -1,10 +1,12 @@
 import { and, eq, isNull, desc } from 'drizzle-orm';
+import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { normalizeMobile, requestOtpBody, updateProfileBody, verifyOtpBody, type MeDTO, type StaffMeDTO, } from '@torbat/contracts';
 import { normalizePersian } from '@torbat/i18n';
 import { organizationMembers, organizations, requests, users, notifications } from '../db/schema';
 import { audit } from '../lib/audit';
-import { badRequest, forbidden } from '../lib/errors';
+import { badRequest, forbidden, notFound } from '../lib/errors';
+import { DEMO_USERS } from '../seed/catalog';
 import { route } from '../lib/route';
 import { issueOtp, verifyOtp } from './otp';
 import { clearSessionCookie, createSession, revokeAllSessions, revokeSession, rotateSession, setSessionCookie, SESSION_COOKIE, resolveSession, } from './sessions';
@@ -39,6 +41,45 @@ const device = (req: FastifyRequest) => req.headers['user-agent']?.toString();
 export function authRoutes(app: FastifyInstance) {
     const otpLimit = { max: app.ctx.env.NODE_ENV==='test'?30:5, timeWindow: '1 minute' };
     const verifyLimit = { max: app.ctx.env.NODE_ENV==='test'?30:10, timeWindow: '1 minute' };
+    const checkPrivateOtp = () => {
+        if (app.ctx.env.PUBLIC_DEMO) throw forbidden('در نسخه عمومی فقط حساب‌های نمونه قابل استفاده‌اند.');
+    };
+    const demoAccounts = DEMO_USERS.map(account => ({
+        mobile: account.mobile,
+        label: account.displayName,
+        kind: account.platformRole || account.memberships?.length ? 'staff' as const : 'citizen' as const,
+    }));
+    route(app, {
+        method: 'GET', url: '/v1/demo/accounts', summary: 'حساب‌های ساختگی دمو', tags: ['auth'], auth: 'none',
+        handler: async () => {
+            if (!app.ctx.env.PUBLIC_DEMO) throw notFound('ورود آزمایشی عمومی');
+            return { data: demoAccounts };
+        },
+    });
+    route(app, {
+        method: 'POST', url: '/v1/demo/session', summary: 'ورود به محیط نمایشی ایزوله', tags: ['auth'], auth: 'none',
+        body: z.object({ mobile: z.string().regex(/^09\d{9}$/), kind: z.enum(['citizen', 'staff']) }),
+        rateLimit: { max: 45, timeWindow: '1 minute' },
+        handler: async ({ body, req, reply }) => {
+            const { env, db } = app.ctx;
+            if (!env.PUBLIC_DEMO) throw notFound('ورود آزمایشی عمومی');
+            if (!demoAccounts.some(account => account.mobile === body.mobile && account.kind === body.kind)) {
+                throw forbidden('این حساب در فهرست حساب‌های نمونه وجود ندارد.');
+            }
+            const [user] = await db.select().from(users).where(and(eq(users.mobile, body.mobile), isNull(users.deletedAt)));
+            if (!user || user.status !== 'active') throw forbidden('حساب نمونه در دسترس نیست.');
+            const staff = body.kind === 'staff' ? await staffMe(app, user.id) : null;
+            if (staff && !staff.platformRole && staff.memberships.length === 0) throw forbidden('دسترسی این حساب نمونه فعال نیست.');
+            const previous = req.cookies[SESSION_COOKIE[body.kind]];
+            if (previous) {
+                const active = await resolveSession(db, previous, body.kind);
+                if (active) await revokeSession(db, active.sessionId);
+            }
+            const session = await createSession(db, user.id, body.kind, device(req));
+            setSessionCookie(reply, env, body.kind, session.token, session.expiresAt);
+            return { user: staff ?? toMe(user) };
+        },
+    });
     /* ───── citizen ───── */
     route(app, {
         method: 'POST',
@@ -48,7 +89,7 @@ export function authRoutes(app: FastifyInstance) {
         auth: 'none',
         body: requestOtpBody,
         rateLimit: otpLimit,
-        handler: async ({ body, req }) => issueOtp(app.ctx, parseMobile(body.mobile), 'citizen', req.log),
+        handler: async ({ body, req }) => { checkPrivateOtp(); return issueOtp(app.ctx, parseMobile(body.mobile), 'citizen', req.log); },
     });
     route(app, {
         method: 'POST',
@@ -59,6 +100,7 @@ export function authRoutes(app: FastifyInstance) {
         body: verifyOtpBody,
         rateLimit: verifyLimit,
         handler: async ({ body, req, reply }) => {
+            checkPrivateOtp();
             const { db, env } = app.ctx;
             const mobile = parseMobile(body.mobile);
             await verifyOtp(app.ctx, mobile, body.code, 'citizen');
@@ -172,6 +214,11 @@ export function authRoutes(app: FastifyInstance) {
         auth: 'citizen',
         handler: async ({ req, reply }) => {
             const { db, env } = app.ctx;
+            if (env.PUBLIC_DEMO) {
+                await revokeSession(db, req.citizen!.sessionId);
+                clearSessionCookie(reply, env, 'citizen');
+                return { ok: true, simulated: true };
+            }
             const userId = req.citizen!.userId;
             await db.transaction(async (tx) => {
                 // Requests stay with the organizations (they are public-service records) but lose the link to the person.
@@ -195,7 +242,7 @@ export function authRoutes(app: FastifyInstance) {
         auth: 'none',
         body: requestOtpBody,
         rateLimit: otpLimit,
-        handler: async ({ body, req }) => issueOtp(app.ctx, parseMobile(body.mobile), 'staff', req.log),
+        handler: async ({ body, req }) => { checkPrivateOtp(); return issueOtp(app.ctx, parseMobile(body.mobile), 'staff', req.log); },
     });
     route(app, {
         method: 'POST',
@@ -206,6 +253,7 @@ export function authRoutes(app: FastifyInstance) {
         body: verifyOtpBody,
         rateLimit: verifyLimit,
         handler: async ({ body, req, reply }) => {
+            checkPrivateOtp();
             const { db, env } = app.ctx;
             const mobile = parseMobile(body.mobile);
             await verifyOtp(app.ctx, mobile, body.code, 'staff');

@@ -79,6 +79,55 @@ describe('Torbat-e Man API Integration Suite', () => {
         if (testDir)
             await rm(testDir, { recursive: true, force: true });
     });
+    it('only the public demo instance can sign in using the seeded accounts', async () => {
+        const endpoint = '/v1/demo/session';
+        const sample = { mobile: '09120000001', kind: 'citizen' };
+        expect((await app.inject({ method: 'POST', url: endpoint, payload: sample })).statusCode).toBe(404);
+        expect(() => loadEnv({
+            NODE_ENV: 'production',
+            APP_ENV: 'demo',
+            PUBLIC_DEMO: 'true',
+            DATABASE_URL: 'postgres://localhost/torbat',
+            STORAGE_DIR: '/opt/torbat-man/shared/uploads',
+        })).toThrow('dedicated demo database');
+
+        const demo = await createApp({
+            ...app.ctx,
+            env: loadEnv({ NODE_ENV: 'test', APP_ENV: 'demo', PUBLIC_DEMO: 'true', OTP_DEV_ECHO: 'true', LOG_LEVEL: 'silent' }),
+        });
+        try {
+            const accounts = (await demo.inject('/v1/demo/accounts')).json().data as {
+                mobile: string; label: string; kind: 'citizen' | 'staff';
+            }[];
+            expect(accounts.filter(account => account.kind === 'citizen')).toHaveLength(2);
+            expect(accounts.filter(account => account.kind === 'staff')).toHaveLength(10);
+            for (const account of accounts) {
+                const login = await demo.inject({ method: 'POST', url: endpoint, payload: { mobile: account.mobile, kind: account.kind } });
+                expect(login.statusCode).toBe(200);
+                const cookie = String(login.headers['set-cookie']).split(';')[0]!;
+                expect(cookie).toMatch(new RegExp('^' + SESSION_COOKIE[account.kind] + '='));
+                const url = account.kind === 'staff' ? '/v1/admin/me' : '/v1/me';
+                const me = await demo.inject({ url, headers: { cookie } });
+                expect(me.statusCode).toBe(200);
+                expect(me.json().displayName).toBe(account.label);
+                if (account.mobile === sample.mobile) {
+                    const deletion = await demo.inject({ method: 'DELETE', url, headers: { cookie } });
+                    expect(deletion.json()).toEqual({ ok: true, simulated: true });
+                    expect((await demo.inject({ url, headers: { cookie } })).statusCode).toBe(401);
+                    expect((await demo.inject({ method: 'POST', url: endpoint, payload: sample })).statusCode).toBe(200);
+                }
+            }
+            for (const payload of [{ ...sample, kind: 'staff' }, { ...sample, mobile: '09123456789' }]) {
+                expect((await demo.inject({ method: 'POST', url: endpoint, payload })).statusCode).toBe(403);
+            }
+            for (const prefix of ['/v1/auth/', '/v1/admin/auth/']) {
+                expect((await demo.inject({ method: 'POST', url: prefix + 'request-otp', payload: { mobile: sample.mobile } })).statusCode).toBe(403);
+                expect((await demo.inject({ method: 'POST', url: prefix + 'verify-otp', payload: { mobile: sample.mobile, code: '123456' } })).statusCode).toBe(403);
+            }
+        } finally {
+            await demo.close();
+        }
+    }, 15000);
     it('1. GET /health should return status ok', async () => {
         const res = await app.inject({ method: 'GET', url: '/health' });
         expect(res.statusCode).toBe(200);

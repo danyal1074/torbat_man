@@ -1,19 +1,6 @@
-import React, { useState } from 'react';
-import { Logo, Button, Dialog } from '@torbat/ui';
-import {
-  LayoutDashboard,
-  ClipboardList,
-  Layers,
-  Megaphone,
-  LogOut,
-  User,
-  ShieldCheck,
-  Building2,
-  RefreshCw,
-  Droplet,
-  Zap,
-  Lock,
-} from 'lucide-react';
+import { useState } from 'react';
+import { Logo, Dialog } from '@torbat/ui';
+import { LayoutDashboard, ClipboardList, Layers, Megaphone, MessageSquare, LogOut } from 'lucide-react';
 import { StaffAuthProvider, useStaffAuth } from './context/StaffAuthContext';
 import { StaffLoginPage } from './pages/StaffLoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -22,14 +9,34 @@ import { CaseDetailPage } from './pages/CaseDetailPage';
 import { ServicesManagementPage } from './pages/ServicesManagementPage';
 import { AnnouncementsManagementPage } from './pages/AnnouncementsManagementPage';
 
-type AdminTab = 'dashboard' | 'cartable' | 'services' | 'announcements';
+import { FeedbackInboxPage } from './pages/FeedbackInboxPage';
+
+const tabs = [
+  { id: 'dashboard', label: 'داشبورد پایش', icon: LayoutDashboard },
+  { id: 'cartable', label: 'کارتابل پرونده‌ها', icon: ClipboardList },
+  { id: 'services', label: 'مدیریت خدمات', icon: Layers },
+  { id: 'announcements', label: 'اطلاعیه‌ها', icon: Megaphone },
+  { id: 'feedback', label: 'پیام‌های پشتیبانی', icon: MessageSquare },
+] as const;
+type AdminTab = typeof tabs[number]['id'];
+
+const privateDemoAccounts = [
+  { mobile: '09130000002', label: 'مسئول ارجاع شهرداری' },
+  { mobile: '09130000001', label: 'کارشناس شهرداری' },
+  { mobile: '09140000002', label: 'مسئول ارجاع آبفا' },
+  { mobile: '09150000002', label: 'مسئول ارجاع برق' },
+  { mobile: '09100000000', label: 'مدیر سامانه' },
+];
 
 function AdminContent() {
-  const { staff, isLoading, logout, loginAsDemoStaff } = useStaffAuth();
+  const { staff, isLoading, logout, loginAsDemoStaff, publicDemo, demoAccounts } = useStaffAuth();
   const [currentTab, setCurrentTab] = useState<AdminTab>('dashboard');
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [cartableStatusFilter, setCartableStatusFilter] = useState<string | undefined>(undefined);
   const [showSwitchModal, setShowSwitchModal] = useState(false);
+
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState('');
 
   if (isLoading) {
     return (
@@ -42,6 +49,34 @@ function AdminContent() {
   if (!staff) {
     return <StaffLoginPage />;
   }
+
+  const isPlatformAdmin = staff.platformRole === 'platform_admin';
+  const isOrgManager = staff.memberships.some(membership => membership.role === 'org_manager');
+  const permissions: Record<AdminTab, boolean> = {
+    dashboard: isPlatformAdmin || staff.memberships.length > 0,
+    cartable: isPlatformAdmin || staff.memberships.length > 0,
+    services: isPlatformAdmin || isOrgManager,
+    announcements: isPlatformAdmin || isOrgManager || staff.platformRole === 'content_editor',
+    feedback: isPlatformAdmin || staff.platformRole === 'support_agent',
+  };
+  const visibleTabs = tabs.filter(tab => permissions[tab.id]);
+  const activeTab = permissions[currentTab] ? currentTab : visibleTabs[0]?.id;
+
+  const switchAccount = async (mobile: string) => {
+    setSwitching(true);
+    setSwitchError('');
+    try {
+      await loginAsDemoStaff(mobile);
+      setActiveCaseId(null);
+      setCartableStatusFilter(undefined);
+      setCurrentTab('dashboard');
+      setShowSwitchModal(false);
+    } catch (error) {
+      setSwitchError(error instanceof Error ? error.message : 'تغییر حساب انجام نشد.');
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   const handleNavigateCartable = (filterStatus?: string) => {
     setActiveCaseId(null);
@@ -58,8 +93,8 @@ function AdminContent() {
     <div className="min-h-screen bg-[#F8F9FA] text-slate-800 flex flex-col font-sans selection:bg-purple-100 selection:text-purple-900">
       
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-6">
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3 lg:gap-6">
           <div
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => {
@@ -73,68 +108,21 @@ function AdminContent() {
             </span>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="flex items-center gap-1 text-xs">
-            <button
-              onClick={() => {
-                setActiveCaseId(null);
-                setCurrentTab('dashboard');
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-colors ${
-                currentTab === 'dashboard'
+          <nav aria-label="بخش‌های پنل" className="flex flex-wrap items-center gap-1 text-xs">
+            {visibleTabs.map(({ id, label, icon: Icon }) => (
+              <button key={id} type="button" aria-current={activeTab === id ? 'page' : undefined}
+                onClick={() => {
+                  setActiveCaseId(null);
+                  setCartableStatusFilter(undefined);
+                  setCurrentTab(id);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-colors ${activeTab === id
                   ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <LayoutDashboard size={16} />
-              <span>داشبورد پایش</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveCaseId(null);
-                setCartableStatusFilter(undefined);
-                setCurrentTab('cartable');
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-colors ${
-                currentTab === 'cartable'
-                  ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <ClipboardList size={16} />
-              <span>کارتابل پرونده‌ها</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveCaseId(null);
-                setCurrentTab('services');
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-colors ${
-                currentTab === 'services'
-                  ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Layers size={16} />
-              <span className="hidden sm:inline">مدیریت خدمات</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveCaseId(null);
-                setCurrentTab('announcements');
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition-colors ${
-                currentTab === 'announcements'
-                  ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Megaphone size={16} />
-              <span className="hidden sm:inline">اطلاعیه‌ها</span>
-            </button>
+                  : 'text-slate-600 hover:bg-slate-100'}`}>
+                <Icon size={16} aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            ))}
           </nav>
         </div>
 
@@ -150,7 +138,7 @@ function AdminContent() {
           </div>
 
           <button
-            onClick={() => setShowSwitchModal(true)}
+            onClick={() => { setSwitchError(''); setShowSwitchModal(true); }}
             className="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl border border-purple-200 transition-colors"
           >
             تغییر نقش
@@ -166,36 +154,41 @@ function AdminContent() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {publicDemo && (
+        <p className="bg-purple-50 px-4 py-2 text-center text-xs font-bold text-purple-950">
+          محیط عمومی آزمایشی تربتینو · فقط دادهٔ ساختگی وارد کنید.
+        </p>
+      )}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
-        {currentTab === 'dashboard' && (
+        {activeTab === 'dashboard' && (
           <DashboardPage
             onNavigateCartable={handleNavigateCartable}
             onNavigateCase={handleNavigateCase}
           />
         )}
 
-        {currentTab === 'cartable' && !activeCaseId && (
+        {activeTab === 'cartable' && !activeCaseId && (
           <CartablePage
             initialStatus={cartableStatusFilter}
             onNavigateCase={handleNavigateCase}
           />
         )}
 
-        {currentTab === 'cartable' && activeCaseId && (
+        {activeTab === 'cartable' && activeCaseId && (
           <CaseDetailPage
             id={activeCaseId}
             onBack={() => setActiveCaseId(null)}
           />
         )}
 
-        {currentTab === 'services' && (
+        {activeTab === 'services' && (
           <ServicesManagementPage />
         )}
 
-        {currentTab === 'announcements' && (
+        {activeTab === 'announcements' && (
           <AnnouncementsManagementPage />
         )}
+        {activeTab === 'feedback' && <FeedbackInboxPage />}
       </main>
 
       {/* Footer */}
@@ -210,95 +203,16 @@ function AdminContent() {
         title="تغییر سریع حساب کاربری و نقش سازمانی"
       >
         <div className="space-y-3 pt-2 text-xs">
-          <p className="text-slate-600">
-            برای آزمودن اختیارات سطوح مختلف (ارجاع، اقدام فنی، انتقال بین ادارات یا مدیریت کل):
-          </p>
-
-          <div className="space-y-2">
-            <button
-              onClick={() => {
-                loginAsDemoStaff('09130000002');
-                setShowSwitchModal(false);
-              }}
-              className="w-full text-right p-3 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2.5">
-                <Building2 size={16} className="text-purple-700" />
-                <div>
-                  <div className="font-bold text-purple-950">مسئول ارجاع شهرداری</div>
-                  <div className="text-[10px] text-purple-700">09130000002 (دسترسی تریاژ و ارجاع)</div>
-                </div>
-              </div>
-              <span className="font-bold text-purple-700">ورود ←</span>
-            </button>
-
-            <button
-              onClick={() => {
-                loginAsDemoStaff('09130000001');
-                setShowSwitchModal(false);
-              }}
-              className="w-full text-right p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2.5">
-                <Building2 size={16} className="text-slate-700" />
-                <div>
-                  <div className="font-bold text-slate-800">کارشناس عملیات شهرداری</div>
-                  <div className="text-[10px] text-slate-500">09130000001 (حل پرونده و اقدام فنی)</div>
-                </div>
-              </div>
-              <span className="font-bold text-slate-600">ورود ←</span>
-            </button>
-
-            <button
-              onClick={() => {
-                loginAsDemoStaff('09140000002');
-                setShowSwitchModal(false);
-              }}
-              className="w-full text-right p-3 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2.5">
-                <Droplet size={16} className="text-blue-600" />
-                <div>
-                  <div className="font-bold text-blue-950">مسئول ارجاع آب و فاضلاب</div>
-                  <div className="text-[10px] text-blue-700">09140000002 (کارتابل حوادث آبفا)</div>
-                </div>
-              </div>
-              <span className="font-bold text-blue-700">ورود ←</span>
-            </button>
-
-            <button
-              onClick={() => {
-                loginAsDemoStaff('09150000002');
-                setShowSwitchModal(false);
-              }}
-              className="w-full text-right p-3 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2.5">
-                <Zap size={16} className="text-amber-600" />
-                <div>
-                  <div className="font-bold text-amber-950">مسئول ارجاع توزیع برق</div>
-                  <div className="text-[10px] text-amber-700">09150000002 (کارتابل روشنایی و برق)</div>
-                </div>
-              </div>
-              <span className="font-bold text-amber-700">ورود ←</span>
-            </button>
-
-            <button
-              onClick={() => {
-                loginAsDemoStaff('09100000000');
-                setShowSwitchModal(false);
-              }}
-              className="w-full text-right p-3 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2.5">
-                <Lock size={16} className="text-rose-700" />
-                <div>
-                  <div className="font-bold text-rose-950">مدیر ارشد سامانه (Super Admin)</div>
-                  <div className="text-[10px] text-rose-700">09100000000 (دسترسی به تمامی ادارات)</div>
-                </div>
-              </div>
-              <span className="font-bold text-rose-700">ورود ←</span>
-            </button>
+          <p className="text-slate-600">حساب نمونه‌ای را انتخاب کنید که می‌خواهید با دسترسی آن کار کنید.</p>
+          {switchError && <p role="alert" className="text-rose-700">{switchError}</p>}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(publicDemo ? demoAccounts : privateDemoAccounts).map(account => (
+              <button key={account.mobile} type="button" disabled={switching}
+                className="rounded-xl border border-purple-200 bg-purple-50 p-3 text-right font-bold text-purple-950 hover:bg-purple-100 disabled:opacity-60"
+                onClick={() => void switchAccount(account.mobile)}>
+                {account.label}
+              </button>
+            ))}
           </div>
         </div>
       </Dialog>

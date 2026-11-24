@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { adminApi, type StaffMe } from '../api/client';
+import { adminApi, type DemoStaffAccount, type StaffMe } from '../api/client';
 
 interface StaffAuthContextType {
   staff: StaffMe | null;
   isLoading: boolean;
+  publicDemo: boolean;
+  demoAccounts: DemoStaffAccount[];
   loginAsDemoStaff: (mobile?: string) => Promise<void>;
   loginWithOtp: (mobile: string, code: string) => Promise<void>;
   requestOtp: (mobile: string) => Promise<string | undefined>;
@@ -16,6 +18,8 @@ const StaffAuthContext = createContext<StaffAuthContextType | undefined>(undefin
 export const StaffAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [staff, setStaff] = useState<StaffMe | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [publicDemo, setPublicDemo] = useState(false);
+  const [demoAccounts, setDemoAccounts] = useState<DemoStaffAccount[]>([]);
 
   const fetchStaff = async () => {
     try {
@@ -33,23 +37,23 @@ export const StaffAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   useEffect(() => {
-    fetchStaff();
+    let active = true;
+    void adminApi.health().then(async ({ publicDemo }) => {
+      if (!active || !publicDemo) return;
+      setPublicDemo(true);
+      const accounts = await adminApi.demoAccounts();
+      if (active) setDemoAccounts(accounts.data.filter(account => account.kind === 'staff'));
+    }).catch(() => {});
+    void fetchStaff();
+    return () => { active = false; };
   }, []);
 
   const loginAsDemoStaff = async (mobile = '09130000002') => {
-    setIsLoading(true);
-    try {
-      const otpRes = await adminApi.requestOtp(mobile);
-      const code = otpRes.devCode;
-      if (!code) throw new Error('ورود آزمایشی فعال نیست.');
-      const staffUser = await adminApi.verifyOtp(mobile, code);
-      setStaff(staffUser);
-    } catch (err) {
-      console.error('Staff demo login error:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+    const mode = await adminApi.health();
+    if (mode.publicDemo) { setStaff(await adminApi.demoLogin(mobile)); return; }
+    const otpRes = await adminApi.requestOtp(mobile);
+    if (!otpRes.devCode) throw new Error('ورود آزمایشی فعال نیست.');
+    setStaff(await adminApi.verifyOtp(mobile, otpRes.devCode));
   };
 
   const requestOtp = async (mobile: string) => {
@@ -77,6 +81,8 @@ export const StaffAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         staff,
         isLoading,
+        publicDemo,
+        demoAccounts,
         loginAsDemoStaff,
         loginWithOtp,
         requestOtp,

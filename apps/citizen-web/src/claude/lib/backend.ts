@@ -24,3 +24,12 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
 export const json = (body: unknown, method = 'POST'): RequestInit => ({ method, body: JSON.stringify(body) });
 export const messageOf = (error: unknown): string => error instanceof Error ? error.message : 'انجام عملیات ممکن نشد. دوباره تلاش کنید.';
+
+export const publicDemoQuery = {
+  queryKey: ['public-demo'],
+  queryFn: async ({ signal }: { signal: AbortSignal }) => {
+    const response = await fetch('/health', { signal });
+    if (!response.ok) throw new Error('وضعیت سامانه دریافت نشد.');
+    return response.json() as Promise<{ publicDemo?: boolean }>;
+  },
+};

@@ -24,6 +24,10 @@ export const session = {
     }
   },
   requestOtp(phone: string) { return api<{ devCode?: string }>('/auth/request-otp', json({ mobile: phone })); },
+  async signInDemo(mobile: string) {
+    const result = await api<{ user: ServerUser }>('/demo/session', json({ mobile, kind: 'citizen' }));
+    showUser(result.user);
+  },
   async signIn(phone: string, code: string) {
     const result = await api<{ user: ServerUser; isNew: boolean }>('/auth/verify-otp', json({ mobile: phone, code }));
     showUser(result.user);

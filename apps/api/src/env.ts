@@ -19,6 +19,7 @@ const schema = z.object({
     /** Comma separated list of browser origins allowed to call the API with cookies. */
     APP_ORIGINS: z.string().default('http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174'),
     OTP_DEV_ECHO: bool.optional(),
+    PUBLIC_DEMO: bool.default(false),
     STORAGE_DIR: z.string().default('./storage'),
     ANTHROPIC_API_KEY: z.string().optional(),
     ANTHROPIC_MODEL: z.string().default('claude-haiku-5-5'),
@@ -34,6 +35,10 @@ export function loadEnv(source: NodeJS.ProcessEnv | Record<string, string | unde
         process.loadEnvFile('.env');
     const parsed = schema.parse(source);
     const isProd = parsed.NODE_ENV === 'production';
+    if (parsed.PUBLIC_DEMO && (parsed.APP_ENV !== 'demo' || (isProd && (
+        !parsed.DATABASE_URL || new URL(parsed.DATABASE_URL).pathname !== '/torbat_public_demo'
+        || !parsed.STORAGE_DIR.endsWith('/public-demo/uploads')
+    )))) throw new Error('Public demo requires the dedicated demo database and uploads directory.');
     if (isProd) {
         if (parsed.SESSION_SECRET.startsWith('dev-only') || parsed.FILE_SIGNING_SECRET.startsWith('dev-only')) {
             throw new Error('SESSION_SECRET and FILE_SIGNING_SECRET must be set in production.');
@@ -45,8 +50,7 @@ export function loadEnv(source: NodeJS.ProcessEnv | Record<string, string | unde
         ...parsed,
         cookieSecure: parsed.COOKIE_SECURE ?? isProd,
         // The OTP code is never echoed when APP_ENV=production, whatever the flag says.
-        // A public demo (APP_ENV=demo) may enable it explicitly because no SMS provider is connected.
-        otpDevEcho: parsed.APP_ENV !== 'production' && (parsed.OTP_DEV_ECHO ?? !isProd),
+        otpDevEcho: !parsed.PUBLIC_DEMO && parsed.APP_ENV !== 'production' && (parsed.OTP_DEV_ECHO ?? !isProd),
         origins: parsed.APP_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean),
     };
 }

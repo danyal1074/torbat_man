@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { publicDemoQuery } from './lib/backend';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Navigate, Route, Routes, useSearchParams } from 'react-router';
 import { BottomNavigation } from './components/ui';
 import ServicesPage from './pages/ServicesPage';
@@ -18,6 +19,13 @@ function LegacyNew() {
 }
 import { CategoryPage, NotFound, ServiceDetailPage, ServiceItemPage } from './pages/OtherPages';
 
+function PublicDemoBanner() {
+  const mode = useQuery(publicDemoQuery);
+  return mode.data?.publicDemo
+    ? <p className="demo-note" role="note">محیط عمومی آزمایشی · حساب‌ها و گزارش‌ها مشترک‌اند. فقط اطلاعات ساختگی وارد کنید.</p>
+    : null;
+}
+
 export default function App() {
   useEffect(() => {
     const controller = new AbortController();
@@ -27,6 +35,7 @@ export default function App() {
   return (
     <QueryClientProvider client={client}>
     <div className="shell ref-shell">
+      <PublicDemoBanner />
       <Routes>
         <Route path="/" element={<ReferenceHome />} />
         <Route path="/more" element={<MorePage />} />
