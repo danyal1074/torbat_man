@@ -26,7 +26,7 @@ const categories = [
 ];
 
 const shortcuts = [
-  { name: 'shahrbin', label: 'شهربین', to: '/services/shahrbin', icon: Camera },
+  { name: 'shahrbin', label: 'مطالبه شهری', to: '/services/shahrbin', icon: Camera },
   { name: 'tracking', label: 'پیگیری', to: '/requests', icon: ClipboardList },
   { name: 'bread', label: 'نانوایی‌ها', to: '/services/bread', icon: Wheat },
   { name: 'tourism', label: 'نقشه شهر', to: '/city-map', icon: MapPinned },

@@ -39,7 +39,7 @@ export const SERVICES_CATALOG: ServiceCategory[] = [
       {
         id: 'shahrbin',
         slug: 'shahrbin',
-        title: 'شهربین',
+        title: 'مطالبه شهری',
         category: 'urban-services',
         categoryTitle: 'خدمات شهری',
         description: 'ثبت و پیگیری آنلاین معضلات و مشکلات شهری در معابر، نظافت، روشنایی و فضای سبز همراه با عکس و موقعیت مکانی.',
@@ -49,7 +49,7 @@ export const SERVICES_CATALOG: ServiceCategory[] = [
         status: 'active',
         statusLabel: 'فعال',
         sla: 'حداکثر ۴ ساعت تریاژ، ۷۲ ساعت رسیدگی',
-        actionText: 'ثبت گزارش در شهربین',
+        actionText: 'ثبت گزارش در مطالبه شهری',
         directRoute: 'report',
       },
       {

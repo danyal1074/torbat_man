@@ -122,7 +122,7 @@ export function NewReportPage() {
 
   return (
     <main className="page-enter">
-      <PageHeader title="ثبت گزارش جدید" subtitle="شهربین" />
+      <PageHeader title="ثبت گزارش جدید" subtitle="مطالبه شهری" />
       <div className="sheet">
         <Stepper steps={STEPS} current={step} />
         <h2 ref={headingRef} tabIndex={-1} className="sec-title">{['نوع مشکل را انتخاب کنید', 'موقعیت را روی نقشه مشخص کنید', 'بررسی و ارسال'][step]}</h2>
@@ -210,11 +210,11 @@ export function SuccessPage() {
   const r = query.data;
   const [copied, setCopied] = useState(false);
   if (query.fetchStatus === "fetching" && !r) return <p role="status">در حال دریافت گزارش…</p>;
-  if (!r) return <main><PageHeader title="ثبت گزارش" subtitle="شهربین" /><EmptyState title="گزارشی پیدا نشد" text="این گزارش در حساب شما موجود نیست." action={<Link className="btn" to="/services/shahrbin">بازگشت به شهربین</Link>} /></main>;
+  if (!r) return <main><PageHeader title="ثبت گزارش" subtitle="مطالبه شهری" /><EmptyState title="گزارشی پیدا نشد" text="این گزارش در حساب شما موجود نیست." action={<Link className="btn" to="/services/shahrbin">بازگشت به مطالبه شهری</Link>} /></main>;
   const copy = async () => { try { await navigator.clipboard.writeText(r.code); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* clipboard blocked */ } };
   return (
     <main className="page-enter">
-      <PageHeader title="ثبت گزارش جدید" subtitle="شهربین" />
+      <PageHeader title="ثبت گزارش جدید" subtitle="مطالبه شهری" />
       <div className="sheet success">
         <span className="ok-ring"><CheckCircle2 size={56} aria-hidden="true" /></span>
         <h2 className="sec-title" role="status">{kindLabel[r.kind]} ثبت شد</h2>
@@ -260,7 +260,7 @@ export function MyReportsPage() {
             {FILTERS.map((x) => <button key={x.id} role="tab" aria-selected={f === x.id} className={`chip${f === x.id ? ' on' : ''}`} onClick={() => setF(x.id)}>{x.label}</button>)}
           </div>
           {!user ? <Link className="btn" to="/login?next=%2Frequests">ورود برای مشاهده درخواست‌ها</Link> : collection.isPending ? <p role="status">در حال دریافت درخواست‌ها…</p> : collection.isError ? <p className="field-err" role="alert">{messageOf(collection.error)}</p> : list.length === 0 ? (
-            <EmptyState title={reports.length ? 'موردی با این وضعیت نیست' : 'هنوز درخواستی ثبت نکرده‌اید'} text={reports.length ? 'فیلتر دیگری را امتحان کنید.' : 'مشکلات شهری را از بخش شهربین گزارش دهید.'}
+            <EmptyState title={reports.length ? 'موردی با این وضعیت نیست' : 'هنوز درخواستی ثبت نکرده‌اید'} text={reports.length ? 'فیلتر دیگری را امتحان کنید.' : 'مشکلات شهری را از بخش مطالبه شهری گزارش دهید.'}
               action={<Link className="btn" to="/shahrbin/new">ثبت گزارش شهری</Link>} />
           ) : (<ul className="rlist">{list.map((r) => <ReportRow key={r.code} r={r} />)}</ul>)}
           {collection.hasNextPage && <button className="btn-soft" onClick={() => void collection.fetchNextPage()} disabled={collection.isFetchingNextPage}>نمایش درخواست‌های بیشتر</button>}
@@ -291,7 +291,7 @@ export function ReportDetailPage() {
   const [reply, setReply] = useState(''); const [reason, setReason] = useState('');
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   if (query.fetchStatus === 'fetching' && !r) return <p role="status">در حال دریافت پرونده…</p>;
-  if (!r) return <main><PageHeader title="جزئیات" subtitle="شهربین" /><EmptyState title="مورد پیدا نشد" text="در حساب فعلی به این پرونده دسترسی ندارید." action={<Link className="btn" to="/requests">درخواست‌های من</Link>} /></main>;
+  if (!r) return <main><PageHeader title="جزئیات" subtitle="مطالبه شهری" /><EmptyState title="مورد پیدا نشد" text="در حساب فعلی به این پرونده دسترسی ندارید." action={<Link className="btn" to="/requests">درخواست‌های من</Link>} /></main>;
   const Icon = r.kind === 'report' ? typeOf(r.typeId).icon : ClipboardList;
   const mine = r.owner === DEMO_USER;
   const run = async (action: () => Promise<unknown>) => {
@@ -414,7 +414,7 @@ export function ReportsMapPage() {
 export function GuidePage() {
   const steps = [['نوع مشکل را انتخاب کنید', 'مثلاً آسفالت، روشنایی یا زباله.'], ['موقعیت را روی نقشه مشخص کنید', 'با لمس نقشه یا دکمه موقعیت فعلی.'], ['ثبت کنید و کد رهگیری بگیرید', 'وضعیت را از «درخواست‌ها» دنبال کنید.']];
   return (
-    <main className="page-enter"><PageHeader title="راهنمای شهربین" subtitle="ثبت گزارش در سه قدم" />
+    <main className="page-enter"><PageHeader title="راهنمای مطالبه شهری" subtitle="ثبت گزارش در سه قدم" />
       <div className="sheet"><ol className="guide">{steps.map(([t, d], i) => <li key={t}><span className="dot">{faDigits(i + 1)}</span><div><strong>{t}</strong><p>{d}</p></div></li>)}</ol>
         <h2 className="sec-title sm">معنی وضعیت‌ها</h2>
         <ul className="prose">{(Object.keys(statusMeta) as ReportStatus[]).map((k) => <li key={k}><StatusBadge status={k} /></li>)}</ul>

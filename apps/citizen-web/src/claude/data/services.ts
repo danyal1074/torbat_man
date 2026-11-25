@@ -19,7 +19,7 @@ export const categories: Category[] = [
   { id: 'city', title: 'خدمات شهری', description: 'گزارش‌ها، امور شهری و خدمات زیرساختی', icon: Building2, tone: 'lilac', services: [
     s('energy', 'انرژی من و انرژی‌یار', Sprout, 'تربتینو'),
     s('nobatino', 'نوبتینو و رزرو نوبت', Users, 'تربتینو'),
-    s('shahrbin', 'شهربین', Megaphone, 'شهرداری تربت حیدریه', 'live'),
+    s('shahrbin', 'مطالبه شهری', Megaphone, 'شهرداری تربت حیدریه', 'live'),
     s('green-space', 'فضای سبز', Trees, 'شهرداری تربت حیدریه'),
     s('lighting', 'روشنایی', Lightbulb, 'شهرداری تربت حیدریه'),
     s('roads', 'معابر و آسفالت', Route, 'شهرداری تربت حیدریه'),

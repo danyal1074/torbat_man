@@ -240,7 +240,7 @@ function AppContent() {
               <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#592582] to-[#7541A5] text-white flex items-center justify-center shadow-lg shadow-purple-900/30 group-hover:scale-105 group-active:scale-95 transition-all border-2 border-white">
                 <Camera size={22} className="stroke-[2.2]" />
               </div>
-              <span className="text-[10px] font-bold text-[#7541A5] mt-1">شهربین</span>
+              <span className="text-[10px] font-bold text-[#7541A5] mt-1">مطالبه شهری</span>
             </button>
 
             {/* 4. Requests */}
