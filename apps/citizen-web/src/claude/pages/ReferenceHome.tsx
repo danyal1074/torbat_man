@@ -67,6 +67,7 @@ export function ReferenceHome() {
             aria-label={item.title} aria-pressed={slide === index}><span/></button>)}
         </div>
       </section>
+      <Link className="energy-home-entry" to="/energy"><Sprout size={26}/><span><strong>انرژی من</strong><small>انرژی‌یار؛ یک قدم کوچک برای خانه و شهر</small></span><ChevronLeft size={20}/></Link>
       <section className="ref-home-section" aria-labelledby="ref-home-categories">
         <div className="ref-section-head">
           <h2 id="ref-home-categories">دسته‌بندی خدمات</h2>

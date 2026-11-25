@@ -1,3 +1,4 @@
+import { energyRoutes } from './energy/routes';
 import fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -80,6 +81,7 @@ export async function createApp(ctx: AppContext): Promise<FastifyInstance> {
     notificationsRoutes(app);
     placesRoutes(app);
     managementRoutes(app);
+    energyRoutes(app);
     app.get('/openapi.json', async () => buildOpenApi(app.routeDocs));
     app.get('/docs', async () => buildOpenApi(app.routeDocs));
     app.addHook('onRequest', async (req, reply) => {

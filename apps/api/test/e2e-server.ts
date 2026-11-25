@@ -15,7 +15,7 @@ await handle.migrate();
 await seedDatabase(handle.db);
 const [city] = await handle.db.select().from(cities);
 const catalog = createCatalogCache(handle.db, city.id);
-const env = loadEnv({ NODE_ENV: 'test', APP_ENV: 'demo', LOG_LEVEL: 'silent', APP_ORIGINS: 'http://localhost:5183' });
+const env = loadEnv({ NODE_ENV: 'test', APP_ENV: 'demo', LOG_LEVEL: 'silent', APP_ORIGINS: 'http://127.0.0.1:15183' });
 const app = await createApp({ db: handle.db, cityId: city.id, catalog, env, storage: createLocalStorage(join(dir, 'files'), env.FILE_SIGNING_SECRET), ai: createAiGateway({ catalog, db: handle.db, model: 'rules', timeoutMs: 1000 }) });
 await app.listen({ host: '127.0.0.1', port: 4010 });
 async function stop() { await app.close(); await handle.close(); await rm(dir, { recursive: true, force: true }); process.exit(0); }

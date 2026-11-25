@@ -371,3 +371,9 @@ export const feedback = pgTable('feedback', {
         .default('new'),
     createdAt: createdAt(),
 });
+
+export const energyHomes = pgTable('energy_homes', {
+    userId: uuid().primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+    data: jsonb().notNull().default({}),
+    updatedAt: updatedAt(),
+});

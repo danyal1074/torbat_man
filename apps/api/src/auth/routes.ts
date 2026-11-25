@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { normalizeMobile, requestOtpBody, updateProfileBody, verifyOtpBody, type MeDTO, type StaffMeDTO, } from '@torbat/contracts';
 import { normalizePersian } from '@torbat/i18n';
-import { organizationMembers, organizations, requests, users, notifications } from '../db/schema';
+import { organizationMembers, organizations, requests, users, notifications, energyHomes } from '../db/schema';
 import { audit } from '../lib/audit';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import { DEMO_USERS } from '../seed/catalog';
@@ -197,12 +197,14 @@ export function authRoutes(app: FastifyInstance) {
                 .select({ title: notifications.title, body: notifications.body, createdAt: notifications.createdAt })
                 .from(notifications)
                 .where(eq(notifications.userId, userId));
+            const [energy] = await db.select({data:energyHomes.data}).from(energyHomes).where(eq(energyHomes.userId,userId));
             reply.header('Content-Disposition', 'attachment; filename="torbat-man-my-data.json"');
             return {
                 exportedAt: new Date().toISOString(),
                 account: toMe(u!),
                 requests: myRequests,
                 notifications: myNotifications,
+                energy: energy?.data ?? null,
             };
         },
     });
@@ -226,6 +228,7 @@ export function authRoutes(app: FastifyInstance) {
                     .update(users)
                     .set({ mobile: `deleted:${userId}`, displayName: null, status: 'deleted', deletedAt: new Date() })
                     .where(eq(users.id, userId));
+                await tx.delete(energyHomes).where(eq(energyHomes.userId,userId));
                 await revokeAllSessions(tx, userId);
                 await audit(tx, { actorId: userId, action: 'account.delete', entityType: 'user', entityId: userId });
             });

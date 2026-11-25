@@ -15,6 +15,13 @@
       "when": 1795077837832,
       "tag": "0001_sad_tiger_shark",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795560000000,
+      "tag": "0002_energy",
+      "breakpoints": true
     }
   ]
 }

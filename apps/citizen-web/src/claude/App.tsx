@@ -1,3 +1,4 @@
+import EnergyPage from './energy/EnergyPage';
 import { useEffect } from 'react';
 import { publicDemoQuery } from './lib/backend';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
@@ -37,6 +38,8 @@ export default function App() {
     <div className="shell ref-shell">
       <PublicDemoBanner />
       <Routes>
+        <Route path="/energy/*" element={<EnergyPage/>}/>
+        <Route path="/services/energy" element={<Navigate to="/energy" replace/>}/>
         <Route path="/" element={<ReferenceHome />} />
         <Route path="/more" element={<MorePage />} />
         <Route path="/terms" element={<TermsPage />} />

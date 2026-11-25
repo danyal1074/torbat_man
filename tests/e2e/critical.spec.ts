@@ -155,3 +155,28 @@ test('پشتیبانی پیام واقعی را در صندوق کارکنان �
     expect(data.some(item => item.message === text)).toBe(true);
   } finally { await context.close(); }
 });
+
+test('انرژی؛ قبض نمونه، تحلیل ۱۸ درصد، برنامه و امتیاز پایدار', async ({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await login(page,'09121117771','/energy/bills');
+ await page.getByRole('button',{name:'افزودن دو قبض کاملاً آزمایشی برای ارائه'}).click();
+ await expect(page.getByText('اطلاعات ذخیره شد.')).toBeVisible();
+ await page.getByRole('link',{name:'کارنامه',exact:true}).click();
+ await expect(page.getByText(/۱۸٪ تغییر کاهشی خام/)).toBeVisible();
+ await page.getByRole('link',{name:'برنامه ۳۰ روزه',exact:true}).click();
+ await page.getByRole('button',{name:'تأیید و ساخت برنامه ۳۰ روزه'}).click();
+ await expect(page.getByRole('button',{name:'انجام دادم'})).toHaveCount(30);
+ await page.getByRole('button',{name:'انجام دادم'}).first().click();
+ await expect(page.getByText('انجام شد',{exact:true})).toHaveCount(1);
+ await page.reload();
+ await expect(page.getByText('انجام شد',{exact:true})).toHaveCount(1);
+ await page.getByRole('link',{name:'کارنامه',exact:true}).click();
+ await expect(page.getByText('۱۰ امتیاز فعالیت · ۱ مأموریت')).toBeVisible();
+ await page.screenshot({path:'test-results/energy-report-mobile.png',fullPage:true});
+ await page.goto('/energy');
+ await expect(page.getByRole('heading',{name:/کمتر مصرف کن/})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ await page.screenshot({path:'test-results/energy-home-mobile.png',fullPage:true});
+ await page.setViewportSize({width:1280,height:900});
+ await page.screenshot({path:'test-results/energy-home-desktop.png',fullPage:true});
+});
