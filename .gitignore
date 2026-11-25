@@ -20,3 +20,12 @@ e2e/.auth/
 .release/
 *.env
 !*.env.example
+
+# Android build artifacts and signing secrets
+apps/citizen-web/android/.gradle/
+apps/citizen-web/android/app/build/
+apps/citizen-web/android/build/
+apps/citizen-web/android/local.properties
+*.jks
+*.keystore
+keystore.properties
