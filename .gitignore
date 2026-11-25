@@ -26,6 +26,7 @@ apps/citizen-web/android/.gradle/
 apps/citizen-web/android/app/build/
 apps/citizen-web/android/build/
 apps/citizen-web/android/local.properties
+release/*.apk
 *.jks
 *.keystore
 keystore.properties
