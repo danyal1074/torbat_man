@@ -1,4 +1,5 @@
 import { energyRoutes } from './energy/routes';
+import { nobatinoRoutes } from './nobatino/routes';
 import fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -82,6 +83,7 @@ export async function createApp(ctx: AppContext): Promise<FastifyInstance> {
     placesRoutes(app);
     managementRoutes(app);
     energyRoutes(app);
+    nobatinoRoutes(app);
     app.get('/openapi.json', async () => buildOpenApi(app.routeDocs));
     app.get('/docs', async () => buildOpenApi(app.routeDocs));
     app.addHook('onRequest', async (req, reply) => {

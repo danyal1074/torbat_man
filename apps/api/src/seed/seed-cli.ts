@@ -1,3 +1,4 @@
+import { seedNobatino } from '../nobatino/seed';
 import { eq } from 'drizzle-orm';
 import { loadEnv } from '../env';
 import { type Db, createDb } from '../db/client';
@@ -217,6 +218,7 @@ export async function seedDatabase(db: Db) {
             });
         }
     }
+    await seedNobatino(db);
     console.log('Database seeded successfully!');
 }
 if (process.argv[1]?.replaceAll('\\', '/').match(/\/seed-cli\.(ts|js)$/))

@@ -377,3 +377,74 @@ export const energyHomes = pgTable('energy_homes', {
     data: jsonb().notNull().default({}),
     updatedAt: updatedAt(),
 });
+
+export const nobBusinesses = pgTable('nob_businesses', {
+ id: uuid().primaryKey().defaultRandom(),
+ ownerId: uuid().notNull().references(()=>users.id),
+ name: text().notNull(),
+ status: text().notNull().default('pending'),
+ isDemo: boolean().notNull().default(false),
+ config: jsonb().$type<import('../nobatino/engine').BusinessConfig>().notNull(),
+ createdAt: createdAt(),
+});
+export const nobBookings = pgTable('nob_bookings', {
+ id: uuid().primaryKey().defaultRandom(),
+ businessId: uuid().notNull().references(()=>nobBusinesses.id),
+ citizenId: uuid().notNull().references(()=>users.id),
+ serviceId: text().notNull(),
+ employeeId: text().notNull(),
+ resource: text().notNull(),
+ startAt: ts().notNull(),
+ endAt: ts().notNull(),
+ buffer: integer().notNull(),
+ capacity: integer().notNull(),
+ status: text().notNull().default('confirmed'),
+ code: text().notNull().unique(),
+ key: text().notNull(),
+ snapshot: jsonb().$type<{title:string;price:number;cancelHours:number;source:string;businessName:string}>().notNull(),
+ events: jsonb().$type<{status:string;at:string;actor:string;reason:string}[]>().notNull().default([]),
+ paid: integer().notNull().default(0),
+ createdAt: createdAt(),
+},t=>[uniqueIndex().on(t.citizenId,t.key),index().on(t.businessId,t.startAt),index().on(t.citizenId)]);
+export const nobTickets = pgTable('nob_tickets', {
+ callKey: text(),
+ id: uuid().primaryKey().defaultRandom(),
+ businessId: uuid().notNull().references(()=>nobBusinesses.id),
+ citizenId: uuid().notNull().references(()=>users.id),
+ day: text().notNull(),
+ number: integer().notNull(),
+ status: text().notNull().default('waiting'),
+ createdAt: createdAt(),
+ updatedAt: updatedAt(),
+},t=>[uniqueIndex().on(t.businessId,t.day,t.number),index().on(t.citizenId)]);
+
+export const nobMembers = pgTable('nob_members', {
+ id: uuid().primaryKey().defaultRandom(),
+ businessId: uuid().notNull().references(()=>nobBusinesses.id),
+ userId: uuid().notNull().references(()=>users.id),
+ role: text().notNull(),
+ employeeId: text(),
+},t=>[uniqueIndex().on(t.businessId,t.userId)]);
+
+export const nobWaitlist = pgTable('nob_waitlist', {
+ id: uuid().primaryKey().defaultRandom(),
+ businessId: uuid().notNull().references(()=>nobBusinesses.id),
+ citizenId: uuid().notNull().references(()=>users.id),
+ serviceId: text().notNull(),
+ day: text().notNull(),
+ status: text().notNull().default('waiting'),
+ slot: jsonb().$type<{startAt:string;employeeId:string}|null>(),
+ expiresAt: ts(),
+ createdAt: createdAt(),
+},t=>[index().on(t.businessId,t.status),index().on(t.citizenId)]);
+
+export const nobReviews = pgTable('nob_reviews', {
+ id: uuid().primaryKey().defaultRandom(),
+ bookingId: uuid().notNull().unique().references(()=>nobBookings.id),
+ businessId: uuid().notNull().references(()=>nobBusinesses.id),
+ citizenId: uuid().notNull().references(()=>users.id),
+ rating: integer().notNull(),
+ body: text().notNull(),
+ status: text().notNull().default('pending'),
+ createdAt: createdAt(),
+});

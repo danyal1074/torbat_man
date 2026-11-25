@@ -180,3 +180,49 @@ test('انرژی؛ قبض نمونه، تحلیل ۱۸ درصد، برنامه �
  await page.setViewportSize({width:1280,height:900});
  await page.screenshot({path:'test-results/energy-home-desktop.png',fullPage:true});
 });
+
+test('نوبتینو؛ رزرو واقعی، تقویم پذیرش، اعلان و آزادسازی زمان', async ({page,browser})=>{
+ await page.setViewportSize({width:390,height:844});
+ await login(page,'09121115551','/nobatino');
+ await page.getByLabel('خدمت یا نام مرکز').fill('کارواش');
+ await page.getByRole('link',{name:/کارواش سپید/}).click();
+ await expect(page.getByRole('heading',{name:'چه وقتی برات مناسبه؟'})).toBeVisible();
+ const day=await page.getByLabel('تاریخ مراجعه').inputValue();
+ await page.locator('.nb-slots button').first().click();
+ await page.getByRole('button',{name:'مرور نوبت',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'همه چیز درسته؟'})).toBeVisible();
+ await page.getByRole('button',{name:'تأیید و ثبت نوبت',exact:true}).click();
+ await page.waitForURL(/nobatino\/bookings/);
+ const code=(await page.locator('.nb-ticket code').first().textContent())!;
+ expect(code).toMatch(/^NB-/);
+ const data=await api<{data:{id:string;businessId:string;code:string}[]}>(page.request,'GET','/nobatino/bookings/me');
+ const booking=data.data.find(b=>b.code===code)!;
+ const owner=await browser.newContext();
+ try{
+  const {devCode}=await api<{devCode:string}>(owner.request,'POST','/auth/request-otp',{mobile:'09120000002'});
+  await api(owner.request,'POST','/auth/verify-otp',{mobile:'09120000002',code:devCode});
+  const reception=await owner.newPage();
+  await reception.goto('/nobatino/manage');
+  await reception.getByLabel('مرکز من').selectOption(booking.businessId);
+  await reception.getByLabel('روز تقویم').fill(day);
+  const row=reception.locator('.nb-calendar-row').filter({hasText:code});
+  await expect(row).toBeVisible();
+  reception.on('dialog',dialog=>void dialog.accept('پذیرش آزمایشی مراجعه‌کننده'));
+  await row.getByRole('button',{name:'پذیرش‌شده',exact:true}).click();
+  await expect(row.getByText(/پذیرش‌شده/).first()).toBeVisible();
+  await page.reload();
+  await expect(page.locator('.nb-ticket').filter({hasText:code}).getByText('پذیرش‌شده',{exact:true})).toBeVisible();
+  await page.screenshot({path:'test-results/nobatino-ticket-mobile.png',fullPage:true});
+  page.on('dialog',dialog=>void dialog.accept());
+  await page.locator('.nb-ticket').filter({hasText:code}).getByRole('button',{name:'لغو نوبت'}).click();
+  await expect(page.locator('.nb-ticket').filter({hasText:code}).getByText('لغوشده',{exact:true})).toBeVisible();
+  await page.goto('/notifications');
+  await expect(page.getByText('نوبت شما ثبت شد').first()).toBeVisible();
+  await page.goto('/nobatino');
+  await expect(page.getByRole('heading',{name:/وقت برای خودت/})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await page.screenshot({path:'test-results/nobatino-home-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1280,height:900});
+  await page.screenshot({path:'test-results/nobatino-home-desktop.png',fullPage:true});
+ }finally{await owner.close();}
+});

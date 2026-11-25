@@ -19,6 +19,7 @@ const schema = z.object({
     /** Comma separated list of browser origins allowed to call the API with cookies. */
     APP_ORIGINS: z.string().default('http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174'),
     OTP_DEV_ECHO: bool.optional(),
+    NOBATINO_ENABLED: bool.default(true),
     PUBLIC_DEMO: bool.default(false),
     STORAGE_DIR: z.string().default('./storage'),
     ANTHROPIC_API_KEY: z.string().optional(),

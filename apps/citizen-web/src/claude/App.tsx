@@ -1,3 +1,4 @@
+import NobatinoPage from './nobatino/NobatinoPage';
 import EnergyPage from './energy/EnergyPage';
 import { useEffect } from 'react';
 import { publicDemoQuery } from './lib/backend';
@@ -38,6 +39,8 @@ export default function App() {
     <div className="shell ref-shell">
       <PublicDemoBanner />
       <Routes>
+        <Route path="/nobatino/*" element={<NobatinoPage/>}/>
+        <Route path="/services/nobatino" element={<Navigate to="/nobatino" replace/>}/>
         <Route path="/energy/*" element={<EnergyPage/>}/>
         <Route path="/services/energy" element={<Navigate to="/energy" replace/>}/>
         <Route path="/" element={<ReferenceHome />} />

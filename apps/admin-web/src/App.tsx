@@ -9,10 +9,12 @@ import { CaseDetailPage } from './pages/CaseDetailPage';
 import { ServicesManagementPage } from './pages/ServicesManagementPage';
 import { AnnouncementsManagementPage } from './pages/AnnouncementsManagementPage';
 
+import { NobatinoAdminPage } from './pages/NobatinoAdminPage';
 import { EnergyAnalyticsPage } from './pages/EnergyAnalyticsPage';
 import { FeedbackInboxPage } from './pages/FeedbackInboxPage';
 
 const tabs = [
+  { id: 'nobatino', label: 'نوبتینو', icon: ClipboardList },
   { id: 'energy', label: 'پایش انرژی', icon: Layers },
   { id: 'dashboard', label: 'داشبورد پایش', icon: LayoutDashboard },
   { id: 'cartable', label: 'کارتابل پرونده‌ها', icon: ClipboardList },
@@ -55,6 +57,7 @@ function AdminContent() {
   const isPlatformAdmin = staff.platformRole === 'platform_admin';
   const isOrgManager = staff.memberships.some(membership => membership.role === 'org_manager');
   const permissions: Record<AdminTab, boolean> = {
+    nobatino: isPlatformAdmin,
     energy: isPlatformAdmin,
     dashboard: isPlatformAdmin || staff.memberships.length > 0,
     cartable: isPlatformAdmin || staff.memberships.length > 0,
@@ -191,6 +194,7 @@ function AdminContent() {
         {activeTab === 'announcements' && (
           <AnnouncementsManagementPage />
         )}
+        {activeTab === 'nobatino' && <NobatinoAdminPage />}
         {activeTab === 'energy' && <EnergyAnalyticsPage />}
         {activeTab === 'feedback' && <FeedbackInboxPage />}
       </main>
