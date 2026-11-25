@@ -69,12 +69,13 @@ export function energyRoutes(app: FastifyInstance) {
  route(app,{method:'POST',url:'/v1/energy/challenge',summary:'عضویت داوطلبانه چالش',tags:['energy'],auth:'citizen',body:z.object({join:z.boolean()}),handler:async({req,body})=>change(req.citizen!.userId,h=>{h.participating=body.join;})});
  route(app,{method:'POST',url:'/v1/energy/ai/chat',summary:'مربی قواعدمحور انرژی',tags:['energy'],auth:'citizen',body:z.object({message:z.string().trim().min(1).max(1500)}),rateLimit:{max:15,timeWindow:'1 minute'},handler:async({req,body})=>{
   const home=await read(req.citizen!.userId), danger=/بوی گاز|دود|مونوکسید|برق گرفت|نشت گاز/.test(body.message);
-  const gas = compare(home.bills,'gas');
-  const insight = gas
-   ? 'بر اساس دو دوره ثبت‌شده، تغییر کاهشی مصرف روزانه گاز '+gas.percent.toLocaleString('fa-IR',{maximumFractionDigits:1})+' درصد است. این مقایسه خام با آب‌وهوا نرمال نشده است.'+(gas.sample?' داده‌ها آزمایشی هستند.':'')
-   : 'برای تحلیل مصرف گاز، دو قبض غیرهمپوشان و قابل مقایسه وارد کنید.';
+  const fuelLabels={gas:'گاز',electricity:'برق',water:'آب'} as const;
+  const comparisons=(['gas','electricity','water'] as const).map(f=>({fuel:f,result:compare(home.bills,f)})).filter(x=>x.result!==null);
+  const insight = comparisons.length
+   ? comparisons.map(x=>'بر اساس دو دوره ثبت‌شده '+fuelLabels[x.fuel]+'، تغییر کاهشی مصرف روزانه '+x.result!.percent.toLocaleString('fa-IR',{maximumFractionDigits:1})+' درصد است.'+(x.result!.sample?' (داده آزمایشی)':'')).join(' ') + ' این مقایسه خام با آب‌وهوا نرمال نشده است.'
+   : 'برای تحلیل مصرف، حداقل دو قبض غیرهمپوشان و قابل مقایسه از یک نوع انرژی وارد کنید.';
   return {mode:'rules',summary:danger?'در صورت خطر فوری، از محل خطر دور شوید و از محل امن با امداد رسمی تماس بگیرید. تجهیزات را دستکاری نکنید.':insight,
-    observations:report(home),recommendations:danger?[]:makePlan(home).slice(0,3),sources:[],missing_data:home.bills.length<2?['دو قبض قابل مقایسه']:[],safety_flags:danger?['urgent']:[],proposed_actions:danger?[]:['create_plan']};
+    observations:report(home),recommendations:danger?[]:makePlan(home).slice(0,3),sources:[],missing_data:comparisons.length===0?['دو قبض قابل مقایسه']:[],safety_flags:danger?['urgent']:[],proposed_actions:danger?[]:['create_plan']};
  }});
  route(app,{method:'DELETE',url:'/v1/energy',summary:'پاک کردن حافظه انرژی خانه',tags:['energy'],auth:'citizen',handler:async({req})=>{
   await app.ctx.db.delete(energyHomes).where(eq(energyHomes.userId,req.citizen!.userId));return {ok:true};

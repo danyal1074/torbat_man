@@ -35,7 +35,8 @@ const configSchema = z.object({
     if (c.employees.some(e => e.services.some(id => !c.services.some(s => s.id === id))))
         ctx.addIssue({ code: 'custom', message: 'خدمت کارمند نامعتبر است.' });
 });
-const bookingBody = z.object({ businessId: uuid, serviceId: z.string().max(60), employeeId: z.string().max(60), startAt: z.iso.datetime(), key: uuid, expectedPrice: z.number().int().nonnegative().optional() });
+const isoDateTime = z.iso.datetime({ offset: true });
+const bookingBody = z.object({ businessId: uuid, serviceId: z.string().max(60), employeeId: z.string().max(60), startAt: isoDateTime, key: uuid, expectedPrice: z.number().int().nonnegative().optional() });
 export function nobatinoRoutes(app: FastifyInstance) {
     if (!app.ctx.env.NOBATINO_ENABLED)
         return;
@@ -166,7 +167,7 @@ export function nobatinoRoutes(app: FastifyInstance) {
         }) });
     for (const action of ['cancel', 'reschedule'] as const)
         route(app, { method: 'POST', url: '/v1/nobatino/bookings/:id/' + action, summary: 'لغو یا جابه‌جایی اتمیک', tags: ['nobatino'], auth: 'citizen',
-            body: z.object({ startAt: z.iso.datetime().optional(), employeeId: z.string().max(60).optional(), reason: z.string().trim().min(2).max(300) }),
+            body: z.object({ startAt: isoDateTime.optional(), employeeId: z.string().max(60).optional(), reason: z.string().trim().min(2).max(300) }),
             handler: async ({ req, params, body }) => ({ data: await app.ctx.db.transaction(async (tx) => {
                     const [initial] = await tx.select().from(nobBookings).where(eq(nobBookings.id, params.id!));
                     if (!initial || initial.citizenId !== req.citizen!.userId)
@@ -186,11 +187,12 @@ export function nobatinoRoutes(app: FastifyInstance) {
                     }
                     if (!body.startAt || !body.employeeId)
                         throw badRequest('TIME', 'زمان و متخصص را انتخاب کنید.');
-                    const date = localDate(new Date(body.startAt));
+                    const normalizedStart = new Date(body.startAt).toISOString();
+                    const date = localDate(new Date(normalizedStart));
                     if (date > localDate(new Date(Date.now() + 90 * 86400000)))
                         throw badRequest('DATE_RANGE', 'بازه رزرو حداکثر ۹۰ روز است.');
                     const all = await tx.select().from(nobBookings).where(eq(nobBookings.businessId, center.id));
-                    const slot = availability(center.config, row!.serviceId, date, all.filter(a => a.id !== row!.id)).find(s => s.startAt === body.startAt && s.employeeId === body.employeeId);
+                    const slot = availability(center.config, row!.serviceId, date, all.filter(a => a.id !== row!.id)).find(s => s.startAt === normalizedStart && s.employeeId === body.employeeId);
                     if (!slot)
                         throw conflict('SLOT_TAKEN', 'زمان جدید پر شده است. نوبت قبلی حفظ شد.');
                     return record(tx, row!, req.citizen!.userId, 'confirmed', body.reason, { startAt: new Date(slot.startAt), endAt: new Date(slot.endAt), employeeId: slot.employeeId });
@@ -215,19 +217,20 @@ export function nobatinoRoutes(app: FastifyInstance) {
             return { data };
         }) });
     route(app, { method: 'POST', url: '/v1/nobatino/manage/:id/offers', summary: 'انتشار وقت آزاد با قیمت واقعی', tags: ['nobatino'], auth: 'citizen',
-        body: z.object({ serviceId: z.string().max(60), startAt: z.iso.datetime(), price: z.number().int().min(0).max(100000000) }), handler: async ({ req, params, body }) => app.ctx.db.transaction(async (tx) => {
+        body: z.object({ serviceId: z.string().max(60), startAt: isoDateTime, price: z.number().int().min(0).max(100000000) }), handler: async ({ req, params, body }) => app.ctx.db.transaction(async (tx) => {
             const center = await business(tx, params.id!, true);
             await access(tx, center, req.citizen!.userId, ['owner', 'manager']);
             const service = center.config.services.find(s => s.id === body.serviceId && s.active);
             if (!service || body.price > service.price)
                 throw badRequest('PRICE', 'قیمت پیشنهاد باید حداکثر برابر قیمت اصلی باشد.');
+            const normalizedStart = new Date(body.startAt).toISOString();
             const all = await tx.select().from(nobBookings).where(eq(nobBookings.businessId, center.id));
-            if (!availability(center.config, service.id, localDate(new Date(body.startAt)), all).some(s => s.startAt === body.startAt))
+            if (!availability(center.config, service.id, localDate(new Date(normalizedStart)), all).some(s => s.startAt === normalizedStart))
                 throw conflict('SLOT_TAKEN', 'زمان پیشنهادی آزاد نیست.');
-            const offers = (center.config.offers ?? []).filter(o => new Date(o.expiresAt) > new Date() && !(o.serviceId === body.serviceId && o.startAt === body.startAt));
+            const offers = (center.config.offers ?? []).filter(o => new Date(o.expiresAt) > new Date() && !(o.serviceId === body.serviceId && o.startAt === normalizedStart));
             if (offers.length >= 20)
                 throw badRequest('LIMIT', 'حداکثر ۲۰ پیشنهاد همزمان مجاز است.');
-            const offer = { ...body, id: randomUUID(), expiresAt: body.startAt };
+            const offer = { ...body, startAt: normalizedStart, id: randomUUID(), expiresAt: normalizedStart };
             offers.push(offer);
             await tx.update(nobBusinesses).set({ config: { ...center.config, offers } }).where(eq(nobBusinesses.id, center.id));
             await audit(tx, { actorId: req.citizen!.userId, action: 'nobatino.offer', entityType: 'business', entityId: center.id });
@@ -266,6 +269,9 @@ export function nobatinoRoutes(app: FastifyInstance) {
         body: bookingBody.omit({ businessId: true }).extend({ citizenId: uuid }), handler: async ({ req, params, body }) => ({ data: await app.ctx.db.transaction(async (tx) => {
                 const row = await business(tx, params.id!, true);
                 await access(tx, row, req.citizen!.userId);
+                const [citizen] = await tx.select({ id: users.id, status: users.status }).from(users).where(eq(users.id, body.citizenId));
+                if (!citizen || citizen.status !== 'active')
+                    throw notFound('حساب شهروند');
                 return reserve(tx, body.citizenId, { ...body, businessId: row.id }, 'reception');
             }) }) });
     route(app, { method: 'PATCH', url: '/v1/nobatino/manage/bookings/:id', summary: 'پذیرش و تغییر وضعیت نوبت', tags: ['nobatino'], auth: 'citizen',
@@ -371,9 +377,10 @@ export function nobatinoRoutes(app: FastifyInstance) {
             const prior = own.find(e => e.serviceId === body.serviceId && e.day === body.day && ['waiting', 'offered'].includes(e.status));
             if (prior)
                 return { data: prior };
-            const [data] = await tx.insert(nobWaitlist).values({ ...body, citizenId: req.citizen!.userId }).returning();
+            const [inserted] = await tx.insert(nobWaitlist).values({ ...body, citizenId: req.citizen!.userId }).returning();
             await offerWaiting(tx, center);
-            return { data };
+            const [data] = await tx.select().from(nobWaitlist).where(eq(nobWaitlist.id, inserted!.id));
+            return { data: data ?? inserted };
         }) });
     route(app, { method: 'GET', url: '/v1/nobatino/waitlist/me', summary: 'پیشنهاد زمان با مهلت پذیرش', tags: ['nobatino'], auth: 'citizen', handler: async ({ req }) => {
             const entries = await app.ctx.db.select().from(nobWaitlist).where(eq(nobWaitlist.citizenId, req.citizen!.userId));
@@ -463,18 +470,46 @@ export function nobatinoRoutes(app: FastifyInstance) {
             return { data };
         }) });
     route(app, { method: 'POST', url: '/v1/nobatino/assistant', summary: 'نوبت‌یار جست‌وجوی قواعدمحور', tags: ['nobatino'], auth: 'none', body: z.object({ message: z.string().trim().min(2).max(500), date: z.iso.date() }), rateLimit: { max: 20, timeWindow: '1 minute' }, handler: async ({ body }) => {
-            const all = await app.ctx.db.select().from(nobBusinesses).where(eq(nobBusinesses.status, 'approved'));
-            const matches = all.filter(b => (b.name + ' ' + b.config.category + ' ' + b.config.services.map(s => s.title).join(' ')).includes(body.message) || body.message.includes(b.config.category.split(' ')[0]!));
-            const normalized = body.message.replace(/[۰-۹]/g, c => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)));
+            const norm = (s: string) => s
+                .replace(/ي/g, 'ی')
+                .replace(/ك/g, 'ک')
+                .replace(/\u200c/g, ' ')
+                .replace(/[۰-۹]/g, c => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)))
+                .replace(/[٠-٩]/g, c => String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)));
+            const normalized = norm(body.message);
             const budgetText = normalized.match(/(?:زیر|تا|حداکثر)\s*([0-9]+)\s*(هزار)?\s*تومان/);
             const budget = budgetText ? Number(budgetText[1]) * (budgetText[2] ? 1000 : 1) : null;
-            const chosenDate = body.message.includes('پس فردا') ? localDate(new Date(Date.now() + 2 * 86400000)) : body.message.includes('فردا') ? localDate(new Date(Date.now() + 86400000)) : body.message.includes('امروز') ? localDate() : body.date;
-            const minimum = body.message.includes('عصر') ? 15 : body.message.includes('شب') ? 18 : body.message.includes('ظهر') ? 12 : 0;
-            const maximum = body.message.includes('صبح') ? 12 : body.message.includes('ظهر') ? 15 : 24;
+            const chosenDate = normalized.includes('پس فردا') ? localDate(new Date(Date.now() + 2 * 86400000)) : normalized.includes('فردا') ? localDate(new Date(Date.now() + 86400000)) : normalized.includes('امروز') ? localDate() : body.date;
+            if (chosenDate < localDate() || chosenDate > localDate(new Date(Date.now() + 90 * 86400000)))
+                throw badRequest('DATE_RANGE', 'تاریخ باید بین امروز تا ۹۰ روز آینده باشد.');
+            const minimum = normalized.includes('عصر') ? 15 : normalized.includes('شب') ? 18 : normalized.includes('ظهر') ? 12 : 0;
+            const maximum = normalized.includes('صبح') ? 12 : normalized.includes('ظهر') ? 15 : 24;
+            const stopWords = new Set(['امروز', 'فردا', 'پس', 'صبح', 'ظهر', 'عصر', 'شب', 'زیر', 'تا', 'حداکثر', 'تومان', 'هزار', 'نزدیک', 'خانه', 'یک', 'یه', 'برای', 'نوبت', 'میخوام', 'می', 'خوام', 'لطفا', 'لطفاً', 'دارید', 'هست', 'پیدا', 'کن', 'رو', 'را', 'به', 'در', 'از', 'و']);
+            const stripped = normalized.replace(/(?:زیر|تا|حداکثر)\s*[0-9]+\s*(?:هزار)?\s*تومان/g, ' ');
+            const tokens = stripped.split(/[\s،,.؟?!]+/).filter(t => t.length >= 2 && !stopWords.has(t) && !/^\d+$/.test(t));
+            if (tokens.length === 0) {
+                return { mode: 'rules', locationAvailable: false, date: chosenDate, data: [], question: 'کدام خدمت یا دسته را در نظر دارید؟ مثلاً کارواش، آرایشگاه یا ورزش.' };
+            }
+            const all = await app.ctx.db.select().from(nobBusinesses).where(eq(nobBusinesses.status, 'approved'));
+            const wordMatch = (text: string, token: string) => {
+                const words = text.split(/[\s·،,.؟?!]+/);
+                return words.some(w => w === token || (token.length >= 3 && w.includes(token)));
+            };
+            const scored = all.map(b => {
+                const serviceTitles = b.config.services.filter(s => s.active).map(s => norm(s.title)).join(' ');
+                const centerText = norm(b.name.replace(/·\s*نمونه/g, '') + ' ' + b.config.category);
+                const score = tokens.reduce((acc, t) => acc + (wordMatch(serviceTitles, t) ? 3 : 0) + (wordMatch(centerText, t) ? 1 : 0), 0);
+                return { b, score };
+            }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
             const options = [];
-            for (const b of matches.slice(0, 10)) {
+            for (const { b } of scored.slice(0, 10)) {
                 const bookings = await app.ctx.db.select().from(nobBookings).where(eq(nobBookings.businessId, b.id));
-                for (const s of b.config.services) {
+                for (const s of b.config.services.filter(s => s.active)) {
+                    const serviceText = norm(s.title);
+                    const centerText = norm(b.name.replace(/·\s*نمونه/g, '') + ' ' + b.config.category);
+                    const serviceMatches = tokens.some(t => wordMatch(serviceText, t)) || !tokens.some(t => !wordMatch(centerText, t));
+                    if (!serviceMatches && b.config.services.some(other => other.active && tokens.some(t => wordMatch(norm(other.title), t))))
+                        continue;
                     const slot = availability(b.config, s.id, chosenDate, bookings).find(slot => {
                         const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tehran', hour: '2-digit', hourCycle: 'h23' }).format(new Date(slot.startAt)));
                         return hour >= minimum && hour < maximum && (budget === null || slot.price <= budget);
@@ -483,6 +518,12 @@ export function nobatinoRoutes(app: FastifyInstance) {
                         options.push({ businessId: b.id, businessName: b.name, serviceId: s.id, title: s.title, ...slot });
                 }
             }
-            return { mode: 'rules', locationAvailable: false, date: chosenDate, data: options, question: options.length ? null : 'نام خدمت یا دسته را کوتاه وارد کنید و تاریخ را انتخاب کنید. مکان و بودجه از متن استخراج نمی‌شوند.' };
+            return {
+                mode: 'rules',
+                locationAvailable: false,
+                date: chosenDate,
+                data: options,
+                question: options.length ? null : 'زمان آزادی با این مشخصات پیدا نشد. روز، بازه زمانی یا عبارت کوتاه‌تری را امتحان کنید. فیلتر مکانی هنوز فعال نیست.',
+            };
         } });
 }
