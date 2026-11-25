@@ -10,9 +10,14 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'تربتینو', short_name: 'تربتینو', lang: 'fa', dir: 'rtl', start_url: '/',
+        name: 'تربتینو — شهر تو، همراه تو', short_name: 'تربتینو', lang: 'fa', dir: 'rtl', start_url: '/',
+        description: 'شهر تو، همراه تو — سوپراپلیکیشن شهروندی تربتینو',
         display: 'standalone', background_color: '#FAFAFC', theme_color: '#6F248E',
-        icons: [{ src: '/torbatino-mark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+        icons: [
+          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,woff2,svg,png}'],

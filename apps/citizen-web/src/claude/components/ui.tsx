@@ -8,7 +8,7 @@ import { ReferenceIcon } from './ReferenceIcon';
 export function Brand() {
   return (
     <Link to="/" className="brand ref-brand" aria-label="تربتینو؛ خانه">
-      <img src="/torbatino-mark.svg" alt="" width={47} height={47} />
+      <img src="/brand/symbol-transparent.png" alt="" width={47} height={47} />
       <span className="brand-text"><span className="brand-name">تربتینو</span><span className="brand-en" aria-hidden="true">TORBATINO</span></span>
     </Link>
   );

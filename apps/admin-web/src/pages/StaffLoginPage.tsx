@@ -66,8 +66,10 @@ export const StaffLoginPage: React.FC = () => {
         
         {/* Brand Banner */}
         <div className="bg-[#592582] p-6 text-center text-white relative">
-          <div className="flex justify-center mb-2">
-            <img src="/brand/horizontal-logo-transparent.png" alt="تربتینو" className="h-10 object-contain invert brightness-0" />
+          <div className="flex justify-center mb-3">
+            <div className="bg-white rounded-2xl px-4 py-2.5 shadow-sm inline-flex items-center justify-center">
+              <img src="/brand/full-logo-transparent.png" alt="تربتینو | TORBATINO — شهر تو، همراه تو" className="h-20 object-contain" />
+            </div>
           </div>
           <h1 className="text-lg font-black tracking-tight">میز کار و کارتابل سازمانی تربتینو</h1>
           <p className="text-xs text-purple-200 mt-1">

@@ -309,7 +309,7 @@ export function WelcomePage() {
   ];
   return (
     <main className="welcome page-enter">
-      <img src="/torbatino-mark.svg" alt="تربتینو" width={120} height={120} />
+      <img src="/brand/full-logo-transparent.png" alt="تربتینو — شهر تو، همراه تو" width={160} height={160} style={{ background: '#fff', borderRadius: 28, padding: 14, objectFit: 'contain' }} />
       <h1>{slides[i].t}</h1><p>{slides[i].d}</p>
       <div className="dots" role="tablist" aria-label="اسلایدها">{slides.map((_, k) => <button key={k} role="tab" aria-selected={k === i} aria-label={`اسلاید ${faDigits(k + 1)}`} className={k === i ? 'on' : ''} onClick={() => setI(k)} />)}</div>
       <div className="stack full">

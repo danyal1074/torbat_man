@@ -30,17 +30,25 @@ export const Logo: React.FC<LogoProps> = ({
     );
   }
 
-  // Horizontal Header Layout with the official transparent branding
+  // Horizontal Header Layout with the official transparent symbol + brand text
   if (variant === 'horizontal') {
     return (
       <div className={`flex items-center gap-2 select-none ${className}`}>
         {!imgError ? (
-          <img
-            src="/brand/horizontal-logo-transparent.png"
-            alt="تربتینو"
-            style={{ height: size, objectFit: 'contain' }}
-            onError={() => setImgError(true)}
-          />
+          <>
+            <img
+              src="/brand/symbol-transparent.png"
+              alt="تربتینو"
+              style={{ height: size, width: size, objectFit: 'contain' }}
+              onError={() => setImgError(true)}
+            />
+            {showText && (
+              <div className="flex flex-col text-right leading-tight">
+                <span className="font-extrabold text-base tracking-tight text-[#64158C]">تربتینو</span>
+                <span className="text-[9px] font-semibold text-[#D49511] tracking-widest">TORBATINO</span>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex items-center gap-2">
             {/* SVG Symbol */}

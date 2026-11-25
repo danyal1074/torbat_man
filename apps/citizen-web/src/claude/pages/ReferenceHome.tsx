@@ -60,7 +60,7 @@ export function ReferenceHome() {
           <span className="ref-banner-text" key={slide}>
             <h1>{highlight.title}</h1><span>{highlight.text}</span>
           </span>
-          <img src="/torbatino-mark.svg" alt="" width="76" height="76"/>
+          <img src="/brand/symbol-transparent.png" alt="" width="76" height="76" style={{ objectFit: 'contain' }}/>
         </Link>
         <div className="ref-carousel-dots" aria-label="اسلایدها">
           {highlights.map((item, index) => <button key={item.to} type="button" onClick={() => setSlide(index)}
